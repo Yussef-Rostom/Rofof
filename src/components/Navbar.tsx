@@ -30,6 +30,16 @@ export const Navbar = () => {
                 0
               </span>
             </Link>
+            <Link to="/admin">
+              <Button variant="ghost" size="sm">
+                Admin
+              </Button>
+            </Link>
+            <Link to="/account">
+              <Button variant="ghost" size="sm">
+                Account
+              </Button>
+            </Link>
             <Link to="/login">
               <Button variant="ghost" size="sm">
                 <User className="mr-2 h-4 w-4" />
@@ -65,6 +75,16 @@ export const Navbar = () => {
                 Cart (0)
               </Link>
               <div className="flex flex-col gap-2 pt-2 border-t border-border">
+                <Link to="/admin">
+                  <Button variant="ghost" className="w-full">
+                    Admin
+                  </Button>
+                </Link>
+                <Link to="/account">
+                  <Button variant="ghost" className="w-full">
+                    Account
+                  </Button>
+                </Link>
                 <Link to="/login">
                   <Button variant="ghost" className="w-full">
                     Login
