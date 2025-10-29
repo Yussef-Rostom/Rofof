@@ -33,6 +33,7 @@ import {
 import { AddUserForm } from "@/components/admin/AddUserForm";
 import { Trash } from "lucide-react";
 import { isAxiosError, AxiosError } from "axios";
+import UsersPageSkeleton from "@/pages/admin/UsersPageSkeleton";
 
 export default function Users() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -219,7 +220,7 @@ export default function Users() {
   ];
 
   if (loading) {
-    return <div>Loading users...</div>;
+    return <UsersPageSkeleton />;
   }
 
   return (

@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye } from "lucide-react";
 import { getMyOrders } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
+import PurchaseHistoryPageSkeleton from '@/pages/account/PurchaseHistoryPageSkeleton';
 
 interface OrderItem {
   listingInfo: {
@@ -78,19 +79,7 @@ function PurchaseHistory() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-display font-bold tracking-tight">Purchase History</h2>
-          <p className="text-muted-foreground">View all listings you've purchased</p>
-        </div>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Loading purchase history...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <PurchaseHistoryPageSkeleton />;
   }
 
   if (error) {

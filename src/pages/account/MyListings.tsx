@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import api from "@/lib/api";
 import { Listing } from "@/types";
+import MyListingsPageSkeleton from "@/pages/account/MyListingsPageSkeleton";
 
 export default function MyListings() {
   const { toast } = useToast();
@@ -64,12 +65,7 @@ export default function MyListings() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-3xl font-display font-bold tracking-tight">My Listings</h2>
-        <p className="text-muted-foreground">Loading your listings...</p>
-      </div>
-    );
+    return <MyListingsPageSkeleton />;
   }
 
   if (error) {

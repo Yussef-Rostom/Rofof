@@ -3,6 +3,7 @@ import { Search, BookOpen, Shield, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ListingCard } from "@/components/ListingCard";
+import { ListingCardSkeleton } from "@/components/ListingCardSkeleton";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { fetchFeaturedListings } from "../store/listingSlice";
@@ -90,7 +91,13 @@ export default function Home() {
             </Link>
           </div>
           
-          {loading && <p className="text-center text-lg">Loading featured listings...</p>}
+          {loading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <ListingCardSkeleton key={index} />
+              ))}
+            </div>
+          )}
           {error && <p className="text-center text-destructive text-lg">Error: {error}</p>}
           {!loading && !error && featuredListings.length === 0 && (
             <div className="text-center py-8">

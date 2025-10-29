@@ -34,6 +34,7 @@ import PurchaseHistory from "./pages/account/PurchaseHistory";
 import UserOrderDetail from "./pages/account/UserOrderDetail"; // Import UserOrderDetail
 import NotFound from "./pages/NotFound";
 import { fetchCart } from "./store/cartSlice";
+import { Spinner } from "@/components/ui/spinner";
 
 // This is a dummy comment to force re-transpilation
 const queryClient = new QueryClient();
@@ -64,7 +65,7 @@ const App = () => {
   }, [dispatch, userLoading, isAuthCheckComplete, isAuthenticated]);
 
   if (!isAuthCheckComplete) {
-    return <div>Loading authentication...</div>; // Or a spinner
+    return <Spinner />;
   }
 
   return (

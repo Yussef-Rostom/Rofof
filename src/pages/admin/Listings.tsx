@@ -9,14 +9,17 @@ import { Badge } from "@/components/ui/badge";
 import { Listing } from "@/types";
 import { Eye, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import ListingsPageSkeleton from "@/pages/admin/ListingsPageSkeleton";
 
 export default function Listings() {
   const [searchQuery, setSearchQuery] = useState("");
   const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchListings = async () => {
+      setLoading(true);
       try {
         const response = await api.get("/admin/listings");
         setListings(response.data);
@@ -26,8 +29,9 @@ export default function Listings() {
           title: "Error",
           description: "Failed to fetch listings.",
           variant: "destructive",
-
         });
+      } finally {
+        setLoading(false);
       }
     };
     fetchListings();
@@ -101,6 +105,10 @@ export default function Listings() {
       ),
     },
   ];
+
+  if (loading) {
+    return <ListingsPageSkeleton />;
+  }
 
   return (
     <div className="space-y-6">

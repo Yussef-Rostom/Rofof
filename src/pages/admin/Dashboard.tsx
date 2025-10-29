@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { StatCard } from "@/components/admin/StatCard";
 import { Users, BookOpen, ShoppingCart, DollarSign } from "lucide-react";
 import { getDashboardStats } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
+import DashboardSkeleton from "@/components/admin/DashboardSkeleton";
 
 interface DashboardStats {
   totalUsers: number;
@@ -45,22 +45,7 @@ export default function Dashboard() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-[30px] w-[200px]" />
-        <Skeleton className="h-[20px] w-[300px]" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Skeleton className="h-[120px] w-full" />
-          <Skeleton className="h-[120px] w-full" />
-          <Skeleton className="h-[120px] w-full" />
-          <Skeleton className="h-[120px] w-full" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-[200px] w-full" />
-          <Skeleton className="h-[200px] w-full" />
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error) {

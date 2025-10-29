@@ -5,43 +5,35 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ShoppingBag } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchCart, removeItemFromCart, updateCartItem } from "@/store/cartSlice";
+import { fetchCart } from "@/store/cartSlice";
 import { RootState, AppDispatch } from "@/store";
 import CartItemRow from "@/components/CartItemRow";
-import { useToast } from "@/hooks/use-toast";
+import CartSkeleton from "@/components/CartSkeleton";
 
 export default function Cart() {
   const dispatch = useDispatch<AppDispatch>();
-  const { items, totalAmount, status, error } = useSelector((state: RootState) => state.cart);
-  const { toast } = useToast();
+  const { items, totalAmount, status, error } = useSelector(
+    (state: RootState) => state.cart
+  );
 
   useEffect(() => {
     dispatch(fetchCart());
   }, [dispatch]);
 
-  const handleRemoveItem = async (itemId: string) => {
-    try {
-      await dispatch(removeItemFromCart(itemId)).unwrap();
-      toast({
-        title: "Item Removed",
-        description: "Item successfully removed from your cart.",
-      });
-    } catch (err: any) {
-      toast({
-        title: "Failed to remove item",
-        description: err.message || "Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-
-
-  if (status === 'loading') {
-    return <div>Loading...</div>;
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen py-8">
+        <div className="container-custom max-w-5xl">
+          <h1 className="font-display text-4xl font-bold mb-8">
+            Shopping Cart
+          </h1>
+          <CartSkeleton />
+        </div>
+      </div>
+    );
   }
 
-  if (status === 'failed') {
+  if (status === "failed") {
     return <div>Error: {error}</div>;
   }
 
@@ -65,7 +57,7 @@ export default function Cart() {
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
               {items.map((item) => (
-                <CartItemRow key={item._id} item={item} handleRemoveItem={handleRemoveItem} />
+                <CartItemRow key={item._id} item={item} />
               ))}
             </div>
 

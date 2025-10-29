@@ -9,6 +9,7 @@ import { Search } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { fetchListings } from "../store/listingSlice";
+import { ListingCardSkeleton } from "@/components/ListingCardSkeleton";
 
 export default function BrowseListings() {
   const dispatch = useDispatch<AppDispatch>();
@@ -108,7 +109,13 @@ export default function BrowseListings() {
 
           {/* Listings Grid */}
           <div className="lg:col-span-3">
-            {loading && <p className="text-center text-lg">Loading listings...</p>}
+            {loading && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <ListingCardSkeleton key={i} />
+                ))}
+              </div>
+            )}
             {error && <p className="text-center text-destructive text-lg">Error: {error}</p>}
             {!loading && !error && filteredListings.length === 0 && (
               <div className="text-center py-16">

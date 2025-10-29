@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Camera } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState, AppDispatch } from "../../store";
+import { RootState, AppDispatch } from "@/store";
 import {
   changeUserPassword,
   clearMessages,
@@ -22,7 +22,8 @@ import {
   updateUserEmail,
   updateUserProfile,
   uploadProfileImage,
-} from "../../store/accountSlice";
+} from "@/store/accountSlice";
+import ProfilePageSkeleton from "@/pages/account/ProfilePageSkeleton";
 
 export default function Profile() {
   const { toast } = useToast();
@@ -151,7 +152,7 @@ export default function Profile() {
       if (!validImageTypes.includes(file.type)) {
         toast({
           title: "Invalid File Type",
-          description: "Only JPG, PNG, or GIF images are allowed.",
+          description: "Only JPG, PNG, or GIF images are allowed.\n",
           variant: "destructive",
         });
         return;
@@ -169,6 +170,10 @@ export default function Profile() {
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
+
+  if (profileLoading && !user) {
+    return <ProfilePageSkeleton />;
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">

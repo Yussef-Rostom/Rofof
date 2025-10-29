@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+import OrdersPageSkeleton from "@/pages/admin/OrdersPageSkeleton";
 
 export default function Orders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -103,16 +103,7 @@ export default function Orders() {
   ];
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-[30px] w-[200px]" />
-        <Skeleton className="h-[20px] w-[300px]" />
-        <div className="flex justify-between items-center">
-          <Skeleton className="h-[40px] w-[150px]" />
-        </div>
-        <Skeleton className="h-[300px] w-full" />
-      </div>
-    );
+    return <OrdersPageSkeleton />;
   }
 
   if (error) {

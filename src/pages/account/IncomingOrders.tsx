@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye } from "lucide-react";
 import { getMySales } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
+import IncomingOrdersPageSkeleton from '@/pages/account/IncomingOrdersPageSkeleton';
 
 interface OrderItem {
   listingInfo: {
@@ -78,21 +79,7 @@ function IncomingOrders() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-display font-bold tracking-tight">Incoming Orders</h2>
-          <p className="text-muted-foreground">
-            Manage orders from buyers who purchased your listings
-          </p>
-        </div>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Loading incoming orders...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <IncomingOrdersPageSkeleton />;
   }
 
   if (error) {
