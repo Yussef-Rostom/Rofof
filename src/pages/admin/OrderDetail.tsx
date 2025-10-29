@@ -1,5 +1,7 @@
 import { useParams, Link } from "react-router-dom";
-import { getOrderById, adminMockUsers, adminMockListings } from "@/lib/adminMockData";
+import { useState, useEffect, useCallback } from "react";
+import { getOrderById, updateOrderStatus } from "@/lib/api";
+import { OrderData as AdminOrder, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,13 +13,76 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, XCircle, Truck, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, XCircle, Truck, CheckCircle2, Hourglass, RefreshCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
+// Another dummy comment to force re-transpilation
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const order = getOrderById(id || "");
+  const [order, setOrder] = useState<AdminOrder | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
+
+  const fetchOrder = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getOrderById(id);
+      setOrder(response);
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch order");
+      setOrder(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
+
+  const handleUpdateStatus = async (newStatus: AdminOrder["status"]) => {
+    if (!order || isUpdatingStatus) return;
+
+    setIsUpdatingStatus(true);
+    try {
+      await updateOrderStatus(order._id, newStatus);
+      toast({
+        title: "Order Status Updated",
+        description: `Order ${order._id} status changed to ${newStatus}`,
+      });
+      fetchOrder(); // Re-fetch order to update UI
+    } catch (err: any) {
+      toast({
+        title: "Failed to Update Status",
+        description: err.message || "An error occurred while updating order status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-[30px] w-[200px]" />
+        <Skeleton className="h-[20px] w-[300px]" />
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-[40px] w-[150px]" />
+        </div>
+        <Skeleton className="h-[300px] w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="text-red-500">Error: {error}</div>;
+  }
 
   if (!order) {
     return (
@@ -37,25 +102,14 @@ export default function OrderDetail() {
     );
   }
 
-  // Find buyer and mock seller
-  const buyer = adminMockUsers.find((user) => user.name === order.buyerName);
-  const mockSeller = adminMockUsers[0]; // Mock seller for demo
+  const buyer: User = order.buyer;
+  const seller: User = order.seller;
 
-  // Mock order items
-  const orderItems = [
-    {
-      id: "1",
-      title: "The Great Gatsby",
-      price: 12.99,
-      quantity: 1,
-    },
-    {
-      id: "2",
-      title: "To Kill a Mockingbird",
-      price: 15.50,
-      quantity: 2,
-    },
-  ];
+  const isStatus = (status: AdminOrder["status"]) => order.status === status;
+  const isPastStatus = (status: AdminOrder["status"]) => {
+    const statuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+    return statuses.indexOf(order.status) > statuses.indexOf(status);
+  };
 
   return (
     <div className="space-y-6">
@@ -73,10 +127,10 @@ export default function OrderDetail() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Order #{order.id}</CardTitle>
+              <CardTitle>Order #{order._id}</CardTitle>
               <Badge
                 variant={
-                  order.status === "Completed"
+                  order.status === "Delivered"
                     ? "default"
                     : order.status === "Shipped"
                     ? "secondary"
@@ -92,7 +146,7 @@ export default function OrderDetail() {
               <div>
                 <p className="text-sm text-muted-foreground">Order Date</p>
                 <p className="font-medium">
-                  {new Date(order.orderDate).toLocaleDateString("en-US", {
+                  {new Date(order.createdAt).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -122,13 +176,13 @@ export default function OrderDetail() {
                 <p className="text-sm font-medium mb-2">Buyer Information</p>
                 <div className="space-y-1">
                   {buyer ? (
-                    <Link to={`/admin/users/${buyer.id}`}>
+                    <Link to={`/admin/users/${buyer._id}`}>
                       <Button variant="link" className="p-0 h-auto">
-                        {order.buyerName}
+                        {buyer.fullName}
                       </Button>
                     </Link>
                   ) : (
-                    <p>{order.buyerName}</p>
+                    <p>N/A</p>
                   )}
                   {buyer && <p className="text-sm text-muted-foreground">{buyer.email}</p>}
                 </div>
@@ -136,12 +190,16 @@ export default function OrderDetail() {
               <div>
                 <p className="text-sm font-medium mb-2">Seller Information</p>
                 <div className="space-y-1">
-                  <Link to={`/admin/users/${mockSeller.id}`}>
-                    <Button variant="link" className="p-0 h-auto">
-                      {mockSeller.name}
-                    </Button>
-                  </Link>
-                  <p className="text-sm text-muted-foreground">{mockSeller.email}</p>
+                  {seller ? (
+                    <Link to={`/admin/users/${seller._id}`}>
+                      <Button variant="link" className="p-0 h-auto">
+                        {seller.fullName}
+                      </Button>
+                    </Link>
+                  ) : (
+                    <p>N/A</p>
+                  )}
+                  {seller && <p className="text-sm text-muted-foreground">{seller.email}</p>}
                 </div>
               </div>
             </div>
@@ -149,10 +207,9 @@ export default function OrderDetail() {
             <div className="mt-6 pt-6 border-t">
               <p className="text-sm font-medium mb-2">Shipping Address</p>
               <div className="text-sm text-muted-foreground space-y-1">
-                <p>123 Main Street</p>
-                <p>Apartment 4B</p>
-                <p>New York, NY 10001</p>
-                <p>United States</p>
+                <p>{order.shippingAddress.street}</p>
+                <p>{order.shippingAddress.city}, {order.shippingAddress.state}</p>
+                <p>{order.shippingAddress.country}</p>
               </div>
             </div>
           </CardContent>
@@ -168,23 +225,21 @@ export default function OrderDetail() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Book Title</TableHead>
+                    <TableHead>Listing Title</TableHead>
                     <TableHead className="text-right">Price</TableHead>
                     <TableHead className="text-center">Quantity</TableHead>
                     <TableHead className="text-right">Subtotal</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orderItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.title}</TableCell>
-                      <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
-                      <TableCell className="text-center">{item.quantity}</TableCell>
-                      <TableCell className="text-right">
-                        ${(item.price * item.quantity).toFixed(2)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  <TableRow key={order.listingInfo.listingId}>
+                    <TableCell className="font-medium">{order.listingInfo.title}</TableCell>
+                    <TableCell className="text-right">${order.listingInfo.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-center">{order.listingInfo.quantity}</TableCell>
+                    <TableCell className="text-right">
+                      ${(order.listingInfo.price * order.listingInfo.quantity).toFixed(2)}
+                    </TableCell>
+                  </TableRow>
                   <TableRow>
                     <TableCell colSpan={3} className="text-right font-medium">
                       Total
@@ -208,43 +263,43 @@ export default function OrderDetail() {
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                onClick={() => {
-                  toast({
-                    title: "Order Cancelled",
-                    description: `Order ${order.id} has been cancelled`,
-                    variant: "destructive",
-                  });
-                }}
-                disabled={order.status === "Completed"}
+                onClick={() => handleUpdateStatus("Pending")}
+                disabled={isUpdatingStatus || isStatus("Pending")}
               >
-                <XCircle className="h-4 w-4 mr-2" />
-                Cancel Order
+                <RefreshCcw className="h-4 w-4 mr-2" />
+                Mark as Pending
               </Button>
               <Button
                 variant="outline"
-                onClick={() => {
-                  toast({
-                    title: "Order Shipped",
-                    description: `Order ${order.id} has been marked as shipped`,
-                  });
-                }}
-                disabled={order.status === "Shipped" || order.status === "Completed"}
+                onClick={() => handleUpdateStatus("Processing")}
+                disabled={isUpdatingStatus || isStatus("Processing")}
+              >
+                <Hourglass className="h-4 w-4 mr-2" />
+                Mark as Processing
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleUpdateStatus("Shipped")}
+                disabled={isUpdatingStatus || isStatus("Shipped")}
               >
                 <Truck className="h-4 w-4 mr-2" />
                 Mark as Shipped
               </Button>
               <Button
                 variant="outline"
-                onClick={() => {
-                  toast({
-                    title: "Order Completed",
-                    description: `Order ${order.id} has been marked as completed`,
-                  });
-                }}
-                disabled={order.status === "Completed"}
+                onClick={() => handleUpdateStatus("Delivered")}
+                disabled={isUpdatingStatus || isStatus("Delivered")}
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                Mark as Completed
+                Mark as Delivered
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleUpdateStatus("Cancelled")}
+                disabled={isUpdatingStatus || isStatus("Cancelled")}
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Cancel Order
               </Button>
             </div>
           </CardContent>

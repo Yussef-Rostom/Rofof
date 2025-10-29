@@ -39,7 +39,7 @@ export function AdminSidebar() {
   const { open } = useSidebar();
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="mt-16">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Admin Panel</SidebarGroupLabel>

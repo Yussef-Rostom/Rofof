@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,59 +12,117 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Eye } from "lucide-react";
+import { getMySales } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
 
-// Mock data for incoming orders (as a seller)
-const mockIncomingOrders = [
-  {
-    id: "ORD-101",
-    buyerName: "Alice Williams",
-    items: "The Great Gatsby",
-    totalPrice: 12.99,
-    orderDate: "2024-04-20",
-    status: "Pending" as const,
-  },
-  {
-    id: "ORD-102",
-    buyerName: "Bob Smith",
-    items: "1984",
-    totalPrice: 13.99,
-    orderDate: "2024-04-18",
-    status: "Shipped" as const,
-  },
-  {
-    id: "ORD-103",
-    buyerName: "Carol Johnson",
-    items: "To Kill a Mockingbird",
-    totalPrice: 15.50,
-    orderDate: "2024-04-15",
-    status: "Completed" as const,
-  },
-];
+interface OrderItem {
+  listingInfo: {
+    title: string;
+    author: string;
+    price: number;
+  };
+  _id: string;
+}
 
-export default function IncomingOrders() {
+interface Order {
+  _id: string;
+  orderDate: string;
+  items: OrderItem[];
+  totalPrice: number;
+  status: "Pending" | "Shipped" | "Delivered" | "Cancelled";
+  buyer: {
+    fullName: string;
+  };
+}
+
+function IncomingOrders() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSales = async () => {
+      try {
+        const data = await getMySales();
+        setOrders(data);
+      } catch (err: any) {
+        setError(err.message || "Failed to fetch sales orders");
+        toast({
+          title: "Error",
+          description: err.message || "Failed to fetch sales orders",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSales();
+  }, [toast]);
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "Completed":
+      case "Delivered":
         return "default";
       case "Shipped":
         return "secondary";
+      case "Pending":
+        return "outline";
+      case "Cancelled":
+        return "destructive";
       default:
         return "outline";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-display font-bold tracking-tight">Incoming Orders</h2>
+          <p className="text-muted-foreground">
+            Manage orders from buyers who purchased your listings
+          </p>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">Loading incoming orders...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-display font-bold tracking-tight">Incoming Orders</h2>
+          <p className="text-muted-foreground">
+            Manage orders from buyers who purchased your listings
+          </p>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive">Error: {error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-display font-bold tracking-tight">Incoming Orders</h2>
         <p className="text-muted-foreground">
-          Manage orders from buyers who purchased your books
+          Manage orders from buyers who purchased your listings
         </p>
       </div>
 
-      {mockIncomingOrders.length === 0 ? (
+      {orders.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">No incoming orders yet.</p>
@@ -89,11 +148,11 @@ export default function IncomingOrders() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockIncomingOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.id}</TableCell>
-                      <TableCell>{order.buyerName}</TableCell>
-                      <TableCell>{order.items}</TableCell>
+                  {orders.map((order) => (
+                    <TableRow key={order._id}>
+                      <TableCell className="font-medium">{order._id}</TableCell>
+                      <TableCell>{order.buyer.fullName}</TableCell>
+                      <TableCell>{order.items?.length || 0} listing(s)</TableCell>
                       <TableCell>${order.totalPrice.toFixed(2)}</TableCell>
                       <TableCell>
                         {new Date(order.orderDate).toLocaleDateString()}
@@ -107,12 +166,7 @@ export default function IncomingOrders() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            toast({
-                              title: "View Order",
-                              description: `Viewing details for order ${order.id}`,
-                            });
-                          }}
+                          onClick={() => navigate(`/account/orders/${order._id}`)}
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View
@@ -129,3 +183,5 @@ export default function IncomingOrders() {
     </div>
   );
 }
+
+export { IncomingOrders as default };

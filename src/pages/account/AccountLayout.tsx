@@ -37,7 +37,7 @@ const accountNavItems = [
 
 function AccountSidebar() {
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="mt-16">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>My Account</SidebarGroupLabel>
@@ -50,8 +50,8 @@ function AccountSidebar() {
                       to={item.url}
                       className={({ isActive }) =>
                         isActive
-                          ? "bg-accent text-accent-foreground font-medium"
-                          : "hover:bg-accent/50"
+                          ? "bg-accent text-foreground font-medium"
+                          : "text-foreground hover:bg-accent/50"
                       }
                     >
                       <item.icon className="h-4 w-4" />

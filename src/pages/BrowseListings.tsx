@@ -1,16 +1,26 @@
-import { useState } from "react";
-import { BookCard } from "@/components/BookCard";
-import { mockBooks, categories } from "@/lib/mockData";
+import { useState, useEffect } from "react";
+import { ListingCard } from "@/components/ListingCard";
+import { categories } from "@/lib/mockData";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Search } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../store";
+import { fetchListings } from "../store/listingSlice";
 
-export default function BrowseBooks() {
+export default function BrowseListings() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { listings, loading, error } = useSelector((state: RootState) => state.listing);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState([0, 50]);
+
+  useEffect(() => {
+    dispatch(fetchListings());
+  }, [dispatch]);
 
   const handleCategoryToggle = (category: string) => {
     setSelectedCategories((prev) =>
@@ -20,13 +30,13 @@ export default function BrowseBooks() {
     );
   };
 
-  const filteredBooks = mockBooks.filter((book) => {
+  const filteredListings = listings.filter((listing) => {
     const matchesSearch =
-      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.author.toLowerCase().includes(searchQuery.toLowerCase());
+      listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      listing.author.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory =
-      selectedCategories.length === 0 || selectedCategories.includes(book.category);
-    const matchesPrice = book.price >= priceRange[0] && book.price <= priceRange[1];
+      selectedCategories.length === 0 || selectedCategories.includes(listing.category);
+    const matchesPrice = listing.price >= priceRange[0] && listing.price <= priceRange[1];
     
     return matchesSearch && matchesCategory && matchesPrice;
   });
@@ -34,7 +44,7 @@ export default function BrowseBooks() {
   return (
     <div className="min-h-screen py-8">
       <div className="container-custom">
-        <h1 className="font-display text-4xl font-bold mb-8">Browse Books</h1>
+        <h1 className="font-display text-4xl font-bold mb-8">Browse Listings</h1>
 
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Filters Sidebar */}
@@ -96,22 +106,26 @@ export default function BrowseBooks() {
             </div>
           </aside>
 
-          {/* Books Grid */}
+          {/* Listings Grid */}
           <div className="lg:col-span-3">
-            <p className="text-muted-foreground mb-6">
-              Showing {filteredBooks.length} {filteredBooks.length === 1 ? "book" : "books"}
-            </p>
-            
-            {filteredBooks.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredBooks.map((book) => (
-                  <BookCard key={book.id} {...book} />
-                ))}
-              </div>
-            ) : (
+            {loading && <p className="text-center text-lg">Loading listings...</p>}
+            {error && <p className="text-center text-destructive text-lg">Error: {error}</p>}
+            {!loading && !error && filteredListings.length === 0 && (
               <div className="text-center py-16">
-                <p className="text-muted-foreground text-lg">No books found matching your criteria</p>
+                <p className="text-muted-foreground text-lg">No listings found matching your criteria</p>
               </div>
+            )}
+            {!loading && !error && filteredListings.length > 0 && (
+              <>
+                <p className="text-muted-foreground mb-6">
+                  Showing {filteredListings.length} {filteredListings.length === 1 ? "listing" : "listings"}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredListings.map((listing) => (
+                    <ListingCard key={listing._id} {...listing} />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>

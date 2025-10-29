@@ -1,19 +1,49 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser } from "../store/userSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { BookOpen } from "lucide-react";
+import { AppDispatch, RootState } from "../store";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { isAuthenticated, loading, error } = useSelector(
+    (state: RootState) => state.user
+  );
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/"); // Redirect to home or dashboard on successful login
+    }
+    if (error) {
+      toast({
+        title: "Login Failed",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [isAuthenticated, navigate, error, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Authentication logic will go here
-    console.log("Login:", { email, password });
+    dispatch(loginUser({ email, password }));
   };
 
   return (
@@ -22,7 +52,9 @@ export default function Login() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
             <BookOpen className="h-8 w-8 text-primary" />
-            <span className="font-display text-3xl font-bold text-primary">Rofof</span>
+            <span className="font-display text-3xl font-bold text-primary">
+              Rofof
+            </span>
           </Link>
           <h1 className="font-display text-2xl font-bold">Welcome Back</h1>
           <p className="text-muted-foreground">Sign in to your account</p>
@@ -31,7 +63,9 @@ export default function Login() {
         <Card className="shadow-elegant">
           <CardHeader>
             <CardTitle>Login</CardTitle>
-            <CardDescription>Enter your credentials to access your account</CardDescription>
+            <CardDescription>
+              Enter your credentials to access your account
+            </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
@@ -59,12 +93,15 @@ export default function Login() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full">
-                Sign In
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Signing In..." : "Sign In"}
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 Don't have an account?{" "}
-                <Link to="/register" className="text-primary hover:underline font-medium">
+                <Link
+                  to="/register"
+                  className="text-primary hover:underline font-medium"
+                >
                   Sign up
                 </Link>
               </p>

@@ -1,23 +1,61 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { registerUser } from "../store/userSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen } from "lucide-react";
+import { AppDispatch, RootState } from "../store";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Register() {
   const [formData, setFormData] = useState({
-    name: "",
+    fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const { isAuthenticated, loading, error } = useSelector(
+    (state: RootState) => state.user
+  );
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/"); // Redirect to home or dashboard on successful registration
+    }
+    if (error || localError) {
+      toast({
+        
+        title: "Registration Failed",
+        description: error || localError,
+        variant: "destructive",
+      });
+      setLocalError(null); // Clear local error after showing toast
+    }
+  }, [isAuthenticated, navigate, error, localError, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Registration logic will go here
-    console.log("Register:", formData);
+    setLocalError(null); // Clear previous local errors
+
+    if (formData.password !== formData.confirmPassword) {
+      setLocalError("Passwords do not match.");
+      return;
+    }
+
+    dispatch(registerUser({
+      fullName: formData.fullName,
+      email: formData.email,
+      password: formData.password,
+    }));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,17 +77,17 @@ export default function Register() {
         <Card className="shadow-elegant">
           <CardHeader>
             <CardTitle>Sign Up</CardTitle>
-            <CardDescription>Create your account to start buying and selling books</CardDescription>
+            <CardDescription>Create your account to start buying and selling listings</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="fullName">Full Name</Label>
                 <Input
-                  id="name"
+                  id="fullName"
                   type="text"
                   placeholder="John Doe"
-                  value={formData.name}
+                  value={formData.fullName}
                   onChange={handleChange}
                   required
                 />
@@ -89,8 +127,8 @@ export default function Register() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full">
-                Create Account
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Registering..." : "Create Account"}
               </Button>
               <p className="text-sm text-center text-muted-foreground">
                 Already have an account?{" "}

@@ -1,34 +1,72 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ShoppingBag, Trash2 } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchCart, removeItemFromCart, updateCartItem } from "@/store/cartSlice";
+import { RootState, AppDispatch } from "@/store";
+import CartItemRow from "@/components/CartItemRow";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Cart() {
-  // Mock empty cart for now
-  const cartItems: any[] = [];
-  const subtotal = 0;
+  const dispatch = useDispatch<AppDispatch>();
+  const { items, totalAmount, status, error } = useSelector((state: RootState) => state.cart);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    dispatch(fetchCart());
+  }, [dispatch]);
+
+  const handleRemoveItem = async (itemId: string) => {
+    try {
+      await dispatch(removeItemFromCart(itemId)).unwrap();
+      toast({
+        title: "Item Removed",
+        description: "Item successfully removed from your cart.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Failed to remove item",
+        description: err.message || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+
+
+  if (status === 'loading') {
+    return <div>Loading...</div>;
+  }
+
+  if (status === 'failed') {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <div className="min-h-screen py-8">
       <div className="container-custom max-w-5xl">
         <h1 className="font-display text-4xl font-bold mb-8">Shopping Cart</h1>
 
-        {cartItems.length === 0 ? (
+        {items.length === 0 ? (
           <Card className="text-center py-16">
             <CardContent className="pt-6">
               <ShoppingBag className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h2 className="font-display text-2xl font-semibold mb-2">Your cart is empty</h2>
-              <p className="text-muted-foreground mb-6">Start adding some books to your cart!</p>
-              <Link to="/books">
-                <Button variant="hero">Browse Books</Button>
+              <p className="text-muted-foreground mb-6">Start adding some listings to your cart!</p>
+              <Link to="/listings">
+                <Button variant="hero">Browse Listings</Button>
               </Link>
             </CardContent>
           </Card>
         ) : (
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
-              {/* Cart items will be mapped here */}
+              {items.map((item) => (
+                <CartItemRow key={item._id} item={item} handleRemoveItem={handleRemoveItem} />
+              ))}
             </div>
 
             <div>
@@ -38,7 +76,7 @@ export default function Cart() {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                      <span className="font-semibold">${totalAmount ? totalAmount.toFixed(2) : '0.00'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Shipping</span>
@@ -49,7 +87,7 @@ export default function Cart() {
                   <div className="flex justify-between mb-6">
                     <span className="font-display text-lg font-semibold">Total</span>
                     <span className="font-display text-lg font-semibold text-primary">
-                      ${subtotal.toFixed(2)}
+                      ${totalAmount ? totalAmount.toFixed(2) : '0.00'}
                     </span>
                   </div>
                   <Link to="/checkout">

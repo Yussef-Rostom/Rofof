@@ -2,12 +2,19 @@ import { Link } from "react-router-dom";
 import { Search, BookOpen, Shield, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BookCard } from "@/components/BookCard";
-import { mockBooks } from "@/lib/mockData";
+import { ListingCard } from "@/components/ListingCard";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../store";
+import { fetchFeaturedListings } from "../store/listingSlice";
+import { useEffect } from "react";
 
 export default function Home() {
-  const featuredBooks = mockBooks.slice(0, 6);
+  const dispatch = useDispatch<AppDispatch>();
+  const { featuredListings, loading, error } = useSelector((state: RootState) => state.listing);
 
+  useEffect(() => {
+    dispatch(fetchFeaturedListings());
+  }, [dispatch]);
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -15,16 +22,16 @@ export default function Home() {
         <div className="container-custom">
           <div className="max-w-3xl mx-auto text-center animate-fade-in">
             <h1 className="font-display text-4xl md:text-6xl font-bold mb-6 leading-tight">
-              Discover Your Next Great Read
+              Discover Your Next Great Find
             </h1>
             <p className="text-lg md:text-xl mb-8 text-primary-foreground/90">
-              Buy and sell pre-loved books in a community of readers
+              Buy and sell pre-loved items in a community of enthusiasts
             </p>
             
             {/* Search Bar */}
             <div className="flex gap-2 max-w-2xl mx-auto bg-card rounded-lg p-2 shadow-elegant">
               <Input 
-                placeholder="Search for books, authors, or categories..." 
+                placeholder="Search for listings, authors, or categories..." 
                 className="border-0 focus-visible:ring-0 bg-transparent text-foreground"
               />
               <Button variant="default" size="lg">
@@ -46,7 +53,7 @@ export default function Home() {
               </div>
               <h3 className="font-display text-xl font-semibold mb-2">Vast Selection</h3>
               <p className="text-muted-foreground">
-                Thousands of books across all genres and categories
+                Thousands of listings across all genres and categories
               </p>
             </div>
             
@@ -66,28 +73,37 @@ export default function Home() {
               </div>
               <h3 className="font-display text-xl font-semibold mb-2">Best Prices</h3>
               <p className="text-muted-foreground">
-                Great deals on quality pre-loved books
+                Great deals on quality pre-loved items
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Featured Books Section */}
+      {/* Featured Listings Section */}
       <section className="py-16 md:py-24">
         <div className="container-custom">
           <div className="flex items-center justify-between mb-8">
             <h2 className="font-display text-3xl md:text-4xl font-bold">Newest Additions</h2>
-            <Link to="/books">
+            <Link to="/listings">
               <Button variant="outline">View All</Button>
             </Link>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredBooks.map((book) => (
-              <BookCard key={book.id} {...book} />
-            ))}
-          </div>
+          {loading && <p className="text-center text-lg">Loading featured listings...</p>}
+          {error && <p className="text-center text-destructive text-lg">Error: {error}</p>}
+          {!loading && !error && featuredListings.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground text-lg">No featured listings available</p>
+            </div>
+          )}
+          {!loading && !error && featuredListings.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredListings.map((listing) => (
+                <ListingCard key={listing._id} {...listing} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -95,12 +111,12 @@ export default function Home() {
       <section className="py-16 md:py-24 warm-gradient">
         <div className="container-custom text-center">
           <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-            Have Books to Sell?
+            Have Items to Sell?
           </h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Turn your bookshelf into cash. List your books in minutes and reach thousands of potential buyers.
+            Turn your items into cash. List your items in minutes and reach thousands of potential buyers.
           </p>
-          <Link to="/dashboard/add-book">
+          <Link to="/dashboard/add-listing">
             <Button variant="hero" size="lg">
               Start Selling Today
             </Button>

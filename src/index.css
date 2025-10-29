@@ -8,7 +8,7 @@
 
 @layer base {
   :root {
-    /* Warm, bookish color palette */
+    /* Warm, stylish color palette */
     --background: 35 25% 97%;
     --foreground: 0 0% 15%;
 
@@ -106,7 +106,7 @@
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
-  .book-card-hover {
+  .listing-card-hover {
     @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
   }
 
@@ -116,5 +116,21 @@
 
   .warm-gradient {
     background: var(--gradient-warm);
+  }
+}
+
+/* Page Transition Fade */
+.fade-transition {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px); /* Optional: slight movement */
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

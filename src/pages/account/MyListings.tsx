@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,61 +16,82 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-// Mock data for user's listings
-const mockUserListings = [
-  {
-    id: "1",
-    title: "The Great Gatsby",
-    author: "F. Scott Fitzgerald",
-    price: 12.99,
-    condition: "Like New",
-    status: "Available",
-    image: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400",
-  },
-  {
-    id: "2",
-    title: "1984",
-    author: "George Orwell",
-    price: 13.99,
-    condition: "Good",
-    status: "Sold",
-    image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400",
-  },
-  {
-    id: "3",
-    title: "To Kill a Mockingbird",
-    author: "Harper Lee",
-    price: 15.50,
-    condition: "Very Good",
-    status: "Available",
-    image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400",
-  },
-];
+import api from "@/lib/api";
+import { Listing } from "@/types";
 
 export default function MyListings() {
   const { toast } = useToast();
-  const [listings, setListings] = useState(mockUserListings);
+  const navigate = useNavigate();
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDelete = (id: string, title: string) => {
-    setListings(listings.filter((listing) => listing.id !== id));
-    toast({
-      title: "Listing Deleted",
-      description: `"${title}" has been removed from your listings.`,
-    });
+  useEffect(() => {
+    const fetchMyListings = async () => {
+      try {
+        const response = await api.get("/listings/my-listings");
+        setListings(response.data);
+      } catch (err) {
+        setError("Failed to fetch listings.");
+        toast({
+          title: "Error",
+          description: "Failed to fetch your listings.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMyListings();
+  }, [toast]);
+
+  const handleDelete = async (id: string, title: string) => {
+    try {
+      await api.delete(`/listings/${id}`);
+      setListings(listings.filter((listing) => listing._id !== id));
+      toast({
+        title: "Listing Deleted",
+        description: `"${title}" has been removed from your listings.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to delete listing.",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-3xl font-display font-bold tracking-tight">My Listings</h2>
+        <p className="text-muted-foreground">Loading your listings...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-3xl font-display font-bold tracking-tight">My Listings</h2>
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-display font-bold tracking-tight">My Book Listings</h2>
-          <p className="text-muted-foreground">Manage the books you're selling</p>
+          <h2 className="text-3xl font-display font-bold tracking-tight">My Listings</h2>
+          <p className="text-muted-foreground">Manage the items you're selling</p>
         </div>
-        <Link to="/dashboard/add-book">
+        <Link to="/dashboard/add-listing">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            List a New Book
+            List a New Item
           </Button>
         </Link>
       </div>
@@ -78,11 +99,11 @@ export default function MyListings() {
       {listings.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">You haven't listed any books yet.</p>
-            <Link to="/dashboard/add-book">
+            <p className="text-muted-foreground mb-4">You haven't listed any items yet.</p>
+            <Link to="/dashboard/add-listing">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                List Your First Book
+                List Your First Item
               </Button>
             </Link>
           </CardContent>
@@ -90,10 +111,10 @@ export default function MyListings() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing) => (
-            <Card key={listing.id} className="overflow-hidden">
+            <Card key={listing._id} className="overflow-hidden">
               <div className="aspect-[3/4] overflow-hidden">
                 <img
-                  src={listing.image}
+                  src={listing.imageUrls[0]}
                   alt={listing.title}
                   className="w-full h-full object-cover"
                 />
@@ -106,8 +127,8 @@ export default function MyListings() {
 
                 <div className="flex items-center justify-between">
                   <p className="text-xl font-bold">${listing.price.toFixed(2)}</p>
-                  <Badge variant={listing.status === "Available" ? "default" : "secondary"}>
-                    {listing.status}
+                  <Badge variant={listing.condition === "Available" ? "default" : "secondary"}>
+                    {listing.condition}
                   </Badge>
                 </div>
 
@@ -121,10 +142,7 @@ export default function MyListings() {
                     size="sm"
                     className="flex-1"
                     onClick={() => {
-                      toast({
-                        title: "Edit Listing",
-                        description: "Edit functionality coming soon",
-                      });
+                      navigate(`/dashboard/add-listing/${listing._id}`);
                     }}
                   >
                     <Edit className="h-4 w-4 mr-1" />
@@ -148,7 +166,7 @@ export default function MyListings() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => handleDelete(listing.id, listing.title)}
+                          onClick={() => handleDelete(listing._id, listing.title)}
                         >
                           Delete
                         </AlertDialogAction>

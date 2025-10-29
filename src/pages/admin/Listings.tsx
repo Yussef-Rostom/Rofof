@@ -1,18 +1,39 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { DataTable } from "@/components/admin/DataTable";
+import api from "@/lib/api";
+
 import { SearchBar } from "@/components/admin/SearchBar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { adminMockListings, AdminBookListing } from "@/lib/adminMockData";
+import { Listing } from "@/types";
 import { Eye, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Listings() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [listings, setListings] = useState<Listing[]>([]);
   const { toast } = useToast();
 
-  const filteredListings = adminMockListings.filter(
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        const response = await api.get("/admin/listings");
+        setListings(response.data);
+      } catch (error) {
+        console.error("Error fetching listings:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch listings.",
+          variant: "destructive",
+
+        });
+      }
+    };
+    fetchListings();
+  }, [toast]);
+
+  const filteredListings = listings.filter(
     (listing) =>
       listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.author.toLowerCase().includes(searchQuery.toLowerCase())
@@ -21,7 +42,7 @@ export default function Listings() {
   const columns = [
     {
       key: "title",
-      label: "Book Title",
+      label: "Listing Title",
       sortable: true,
     },
     {
@@ -38,13 +59,15 @@ export default function Listings() {
       key: "price",
       label: "Price",
       sortable: true,
-      render: (listing: AdminBookListing) => `$${listing.price.toFixed(2)}`,
+      render: (listing: Listing) => `$${listing.price?.toFixed(2) || "0.00"}`,
     },
     {
       key: "status",
       label: "Status",
-      render: (listing: AdminBookListing) => (
-        <Badge variant={listing.status === "Available" ? "default" : "secondary"}>
+      render: (listing: Listing) => (
+        <Badge
+          variant={listing.status === "Available" ? "default" : "secondary"}
+        >
           {listing.status}
         </Badge>
       ),
@@ -52,16 +75,16 @@ export default function Listings() {
     {
       key: "actions",
       label: "Actions",
-      render: (listing: AdminBookListing) => (
+      render: (listing: Listing) => (
         <div className="flex gap-2">
-          <Link to={`/admin/listings/${listing.id}`}>
+          <Link to={`/admin/listings/${listing._id}`}>
             <Button variant="outline" size="sm">
               <Eye className="h-4 w-4 mr-1" />
               View
             </Button>
           </Link>
           <Button
-            variant="outline"
+            variant="destructive"
             size="sm"
             onClick={() => {
               toast({
@@ -82,8 +105,12 @@ export default function Listings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-display font-bold tracking-tight">Book Listings</h2>
-        <p className="text-muted-foreground">Manage all book listings on the platform</p>
+        <h2 className="text-3xl font-display font-bold tracking-tight">
+          Listings
+        </h2>
+        <p className="text-muted-foreground">
+          Manage all listings on the platform
+        </p>
       </div>
 
       <div className="flex justify-between items-center">

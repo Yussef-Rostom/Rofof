@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,45 +12,55 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Eye } from "lucide-react";
+import { getMyOrders } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
 
-// Mock data for purchase history (as a buyer)
-const mockPurchaseHistory = [
-  {
-    id: "ORD-201",
-    orderDate: "2024-04-22",
-    items: 2,
-    totalPrice: 28.49,
-    status: "Pending" as const,
-    seller: "Jane Cooper",
-  },
-  {
-    id: "ORD-202",
-    orderDate: "2024-04-19",
-    items: 1,
-    totalPrice: 15.99,
-    status: "Shipped" as const,
-    seller: "Michael Brown",
-  },
-  {
-    id: "ORD-203",
-    orderDate: "2024-04-15",
-    items: 3,
-    totalPrice: 42.97,
-    status: "Delivered" as const,
-    seller: "Sarah Johnson",
-  },
-  {
-    id: "ORD-204",
-    orderDate: "2024-04-10",
-    items: 1,
-    totalPrice: 12.99,
-    status: "Delivered" as const,
-    seller: "David Kim",
-  },
-];
+interface OrderItem {
+  listingInfo: {
+    title: string;
+    author: string;
+    price: number;
+  };
+  _id: string;
+}
 
-export default function PurchaseHistory() {
+interface Order {
+  _id: string;
+  orderDate: string;
+  items: OrderItem[];
+  totalPrice: number;
+  status: "Pending" | "Shipped" | "Delivered" | "Cancelled";
+  seller: {
+    fullName: string;
+  };
+}
+
+function PurchaseHistory() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const data = await getMyOrders();
+        setOrders(data);
+      } catch (err: any) {
+        setError(err.message || "Failed to fetch orders");
+        toast({
+          title: "Error",
+          description: err.message || "Failed to fetch orders",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [toast]);
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -57,19 +68,55 @@ export default function PurchaseHistory() {
         return "default";
       case "Shipped":
         return "secondary";
+      case "Pending":
+        return "outline";
+      case "Cancelled":
+        return "destructive";
       default:
         return "outline";
     }
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-display font-bold tracking-tight">Purchase History</h2>
+          <p className="text-muted-foreground">View all listings you've purchased</p>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">Loading purchase history...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-display font-bold tracking-tight">Purchase History</h2>
+          <p className="text-muted-foreground">View all listings you've purchased</p>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive">Error: {error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-display font-bold tracking-tight">Purchase History</h2>
-        <p className="text-muted-foreground">View all books you've purchased</p>
+        <p className="text-muted-foreground">View all listings you've purchased</p>
       </div>
 
-      {mockPurchaseHistory.length === 0 ? (
+      {orders.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">You haven't made any purchases yet.</p>
@@ -95,14 +142,14 @@ export default function PurchaseHistory() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockPurchaseHistory.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.id}</TableCell>
+                  {orders.map((order) => (
+                    <TableRow key={order._id}>
+                      <TableCell className="font-medium">{order._id}</TableCell>
                       <TableCell>
                         {new Date(order.orderDate).toLocaleDateString()}
                       </TableCell>
-                      <TableCell>{order.items} book(s)</TableCell>
-                      <TableCell>{order.seller}</TableCell>
+                      <TableCell>{order.items?.length || 0} listing(s)</TableCell>
+                      <TableCell>{order.seller.fullName}</TableCell>
                       <TableCell>${order.totalPrice.toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(order.status)}>
@@ -113,12 +160,7 @@ export default function PurchaseHistory() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            toast({
-                              title: "View Details",
-                              description: `Viewing details for order ${order.id}`,
-                            });
-                          }}
+                          onClick={() => navigate(`/account/orders/${order._id}`)}
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View Details
@@ -135,3 +177,5 @@ export default function PurchaseHistory() {
     </div>
   );
 }
+
+export { PurchaseHistory as default };

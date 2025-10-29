@@ -1,60 +1,184 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useEffect, useRef } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Camera } from "lucide-react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../../store";
+import {
+  changeUserPassword,
+  clearMessages,
+  fetchAccountProfile,
+  updateUserEmail,
+  updateUserProfile,
+  uploadProfileImage,
+} from "../../store/accountSlice";
 
 export default function Profile() {
   const { toast } = useToast();
-  const [displayName, setDisplayName] = useState("John Doe");
-  const [email, setEmail] = useState("john.doe@example.com");
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.user);
+  const {
+    profileLoading,
+    emailLoading,
+    passwordLoading,
+    error,
+    successMessage,
+    uploadLoading,
+  } = useSelector((state: RootState) => state.account);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleProfileUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Profile Updated",
-      description: "Your profile information has been saved successfully.",
-    });
-  };
+  useEffect(() => {
+    dispatch(fetchAccountProfile()); // Fetch initial profile data
+  }, [dispatch]);
 
-  const handleEmailUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Email Updated",
-      description: "Your email address has been updated successfully.",
-    });
-  };
+  useEffect(() => {
+    if (user) {
+      setDisplayName(user.fullName);
+      setEmail(user.email);
+      if (user.profile) {
+        setBio(user.profile.bio);
+        setAvatarUrl(user.profile.avatarUrl);
+      }
+    }
+  }, [user]);
 
-  const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
+  useEffect(() => {
+    if (error) {
+      const isEmailConflict = error.toLowerCase().includes("email already");
       toast({
-        title: "Passwords Don't Match",
-        description: "Please make sure your new passwords match.",
+        title: isEmailConflict ? "Email Already Registered" : "Update Failed",
+        description: error,
         variant: "destructive",
       });
+      dispatch(clearMessages());
+    }
+  }, [error, successMessage, toast, dispatch]);
+
+  const hasProfileChanges =
+    displayName !== (user?.fullName || "") ||
+    bio !== (user?.profile?.bio || "") ||
+    avatarUrl !== (user?.profile?.avatarUrl || "");
+
+  const hasEmailChanges = email !== (user?.email || "");
+
+  const hasPasswordChanges =
+    currentPassword !== "" &&
+    newPassword !== "" &&
+    confirmPassword !== "" &&
+    newPassword === confirmPassword;
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const changes: { fullName?: string; bio?: string; avatarUrl?: string } = {};
+    if (user?.fullName !== displayName) {
+      changes.fullName = displayName;
+    }
+    if (user?.profile?.bio !== bio) {
+      changes.bio = bio;
+    }
+    if (avatarUrl) {
+      changes.avatarUrl = avatarUrl;
+    }
+
+    if (Object.keys(changes).length > 0) {
+      await dispatch(updateUserProfile(changes));
+    }
+  };
+
+  const handleEmailUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (hasEmailChanges) {
+      await dispatch(updateUserEmail({ email }));
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!hasPasswordChanges) {
+      if (newPassword !== confirmPassword) {
+        toast({
+          title: "Passwords Don't Match",
+          description: "Please make sure your new passwords match.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Missing Password Fields",
+          description: "Please fill in all password fields.",
+          variant: "destructive",
+        });
+      }
       return;
     }
-    toast({
-      title: "Password Changed",
-      description: "Your password has been updated successfully.",
-    });
+
+    await dispatch(
+      changeUserPassword({ oldPassword: currentPassword, newPassword })
+    );
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
   };
 
+  const handleImageChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+
+      // Client-side validation for image types
+      const validImageTypes = ["image/jpeg", "image/png", "image/gif"];
+      if (!validImageTypes.includes(file.type)) {
+        toast({
+          title: "Invalid File Type",
+          description: "Only JPG, PNG, or GIF images are allowed.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const imageUrl = (await dispatch(uploadProfileImage(formData))).payload
+        .imageUrl;
+      setAvatarUrl(imageUrl);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h2 className="text-3xl font-display font-bold tracking-tight">Profile Settings</h2>
-        <p className="text-muted-foreground">Manage your account information and security</p>
+        <h2 className="text-3xl font-display font-bold tracking-tight">
+          Profile Settings
+        </h2>
+        <p className="text-muted-foreground">
+          Manage your account information and security
+        </p>
       </div>
 
       {/* Public Profile Section */}
@@ -69,13 +193,32 @@ export default function Profile() {
           <form onSubmit={handleProfileUpdate} className="space-y-6">
             <div className="flex items-center gap-6">
               <Avatar className="h-24 w-24">
-                <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=John" />
-                <AvatarFallback>JD</AvatarFallback>
+                <AvatarImage
+                  src={
+                    avatarUrl
+                  }
+                />
+                <AvatarFallback>
+                  {user?.fullName?.charAt(0) || "JD"}
+                </AvatarFallback>
               </Avatar>
               <div>
-                <Button type="button" variant="outline" size="sm">
+                <Input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                  className="hidden"
+                  accept="image/*"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={triggerFileInput}
+                  disabled={uploadLoading}
+                >
                   <Camera className="h-4 w-4 mr-2" />
-                  Change Photo
+                  {uploadLoading ? "Uploading..." : "Change Photo"}
                 </Button>
                 <p className="text-xs text-muted-foreground mt-2">
                   JPG, PNG or GIF. Max size 2MB.
@@ -93,7 +236,23 @@ export default function Profile() {
               />
             </div>
 
-            <Button type="submit">Save Changes</Button>
+            <div className="space-y-2">
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell us about yourself..."
+                rows={4}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={profileLoading || !hasProfileChanges}
+            >
+              {profileLoading ? "Saving..." : "Save Changes"}
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -117,7 +276,9 @@ export default function Profile() {
               />
             </div>
 
-            <Button type="submit">Update Email</Button>
+            <Button type="submit" disabled={emailLoading || !hasEmailChanges}>
+              {emailLoading ? "Updating..." : "Update Email"}
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -126,7 +287,9 @@ export default function Profile() {
       <Card>
         <CardHeader>
           <CardTitle>Security</CardTitle>
-          <CardDescription>Change your password to keep your account secure</CardDescription>
+          <CardDescription>
+            Change your password to keep your account secure
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordChange} className="space-y-4">
@@ -163,7 +326,12 @@ export default function Profile() {
               />
             </div>
 
-            <Button type="submit">Change Password</Button>
+            <Button
+              type="submit"
+              disabled={passwordLoading || !hasPasswordChanges}
+            >
+              {passwordLoading ? "Changing..." : "Change Password"}
+            </Button>
           </form>
         </CardContent>
       </Card>
