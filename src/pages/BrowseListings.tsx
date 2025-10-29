@@ -5,19 +5,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Search } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { fetchListings } from "../store/listingSlice";
 import { ListingCardSkeleton } from "@/components/ListingCardSkeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function BrowseListings() {
   const dispatch = useDispatch<AppDispatch>();
   const { listings, loading, error } = useSelector((state: RootState) => state.listing);
+  const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState([0, 50]);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchListings());
@@ -42,68 +53,91 @@ export default function BrowseListings() {
     return matchesSearch && matchesCategory && matchesPrice;
   });
 
+  const renderFilters = () => (
+    <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+      <h2 className="font-display text-xl font-semibold mb-4">Filters</h2>
+
+      {/* Search */}
+      <div className="mb-6">
+        <Label htmlFor="search" className="mb-2">Search</Label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="search"
+            placeholder="Title or author..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      {/* Categories */}
+      <div className="mb-6">
+        <Label className="mb-3">Categories</Label>
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {categories.map((category) => (
+            <div key={category} className="flex items-center space-x-2">
+              <Checkbox
+                id={category}
+                checked={selectedCategories.includes(category)}
+                onCheckedChange={() => handleCategoryToggle(category)}
+              />
+              <label
+                htmlFor={category}
+                className="text-sm cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {category}
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Price Range */}
+      <div>
+        <Label className="mb-3">
+          Price Range: ${priceRange[0]} - ${priceRange[1]}
+        </Label>
+        <Slider
+          min={0}
+          max={50}
+          step={1}
+          value={priceRange}
+          onValueChange={setPriceRange}
+          className="mt-4"
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen py-8">
       <div className="container-custom">
         <h1 className="font-display text-4xl font-bold mb-8">Browse Listings</h1>
 
+        <div className="flex justify-end lg:hidden mb-4">
+          <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline">
+                <Filter className="mr-2 h-4 w-4" />
+                Filters
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-3/4 sm:max-w-sm">
+              <SheetHeader>
+                <SheetTitle>Filter Listings</SheetTitle>
+              </SheetHeader>
+              {renderFilters()}
+            </SheetContent>
+          </Sheet>
+        </div>
+
         <div className="grid lg:grid-cols-4 gap-8">
-          {/* Filters Sidebar */}
-          <aside className="lg:col-span-1 space-y-6">
-            <div className="bg-card border border-border rounded-lg p-6 sticky top-20">
-              <h2 className="font-display text-xl font-semibold mb-4">Filters</h2>
-
-              {/* Search */}
-              <div className="mb-6">
-                <Label htmlFor="search" className="mb-2">Search</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="search"
-                    placeholder="Title or author..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-
-              {/* Categories */}
-              <div className="mb-6">
-                <Label className="mb-3">Categories</Label>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {categories.map((category) => (
-                    <div key={category} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={category}
-                        checked={selectedCategories.includes(category)}
-                        onCheckedChange={() => handleCategoryToggle(category)}
-                      />
-                      <label
-                        htmlFor={category}
-                        className="text-sm cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {category}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price Range */}
-              <div>
-                <Label className="mb-3">
-                  Price Range: ${priceRange[0]} - ${priceRange[1]}
-                </Label>
-                <Slider
-                  min={0}
-                  max={50}
-                  step={1}
-                  value={priceRange}
-                  onValueChange={setPriceRange}
-                  className="mt-4"
-                />
-              </div>
+          {/* Filters Sidebar (Desktop) */}
+          <aside className="hidden lg:block lg:col-span-1 space-y-6">
+            <div className="sticky top-20">
+              {renderFilters()}
             </div>
           </aside>
 

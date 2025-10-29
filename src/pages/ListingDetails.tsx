@@ -123,7 +123,7 @@ export default function ListingDetails() {
               />
             </div>
             {listing.imageUrls && listing.imageUrls.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {listing.imageUrls.map((img, idx) => (
                   <div key={idx} className="aspect-square bg-muted rounded overflow-hidden cursor-pointer hover:opacity-75 transition-opacity">
                     <img src={img} alt={`${listing.title} ${idx + 1}`} className="w-full h-full object-cover" />
