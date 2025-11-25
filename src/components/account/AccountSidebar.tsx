@@ -14,7 +14,7 @@ export function AccountSidebar() {
   return (
     <div className="hidden border-r bg-muted/40 md:block">
       <div className="flex h-full max-h-screen flex-col gap-2">
-        <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+        <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg://lg:px-6">
           <NavLink to="/" className="flex items-center gap-2 font-semibold">
             <BookOpen className="h-6 w-6 text-primary" />
             <span className="h-6 w-6 text-primary">Rofof</span>
@@ -24,7 +24,7 @@ export function AccountSidebar() {
           {user && (
             <div className="flex items-center gap-3 p-2 mb-4 hover:bg-accent/50 rounded-md transition-colors cursor-pointer">
               <Avatar className="h-9 w-9">
-                <AvatarImage src={user.profile?.avatarUrl} alt={user.fullName || ''} />
+                <AvatarImage src={user.profile?.avatarUrl || ""} alt={user.fullName || ''} />
                 <AvatarFallback>{user.fullName ? user.fullName[0] : 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">

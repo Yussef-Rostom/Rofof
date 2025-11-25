@@ -32,7 +32,7 @@ export function UserNav() {
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
             <AvatarImage
-              src={user?.profile?.avatarUrl || "/placeholder.svg"}
+              src={user?.profile?.avatarUrl || ""}
               alt={user?.fullName}
             />
             <AvatarFallback>{user?.fullName?.[0].toUpperCase()}</AvatarFallback>
