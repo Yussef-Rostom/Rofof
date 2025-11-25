@@ -26,12 +26,29 @@ export const fetchCart = createAsyncThunk("cart/fetchCart", async () => {
 
 export const addItemToCart = createAsyncThunk(
   "cart/addItemToCart",
-  async (item: { listingId: string; quantity: number }) => {
-    const response = await api.post("/cart", {
-      listingId: item.listingId,
-      quantity: item.quantity,
-    });
-    return response.data;
+  async (item: { listingId: string; quantity: number }, { getState, dispatch }) => {
+    const state = getState() as { cart: CartState };
+
+    const existingCartItem = state.cart.items.find(
+      (cartItem) => {
+        const currentListingId = typeof cartItem.listing === 'object' ? cartItem.listing._id : cartItem.listing;
+        return currentListingId === item.listingId;
+      }
+    );
+
+    if (existingCartItem) {
+      const newQuantity = existingCartItem.quantity + item.quantity;
+      const response = await api.put(`/cart/${existingCartItem._id}`, {
+        quantity: newQuantity,
+      });
+      return response.data;
+    } else {
+      const response = await api.post("/cart", {
+        listingId: item.listingId,
+        quantity: item.quantity,
+      });
+      return response.data;
+    }
   }
 );
 
@@ -86,13 +103,21 @@ const cartSlice = createSlice({
         state.status = "failed";
         state.error = action.error.message || "Failed to fetch cart";
       })
+      .addCase(addItemToCart.pending, (state) => {
+        state.status = "loading";
+      })
       .addCase(addItemToCart.fulfilled, (state, action) => {
+        state.status = "succeeded";
         state.items = action.payload.items;
         const { totalQuantity, totalAmount } = calculateCartTotals(
           action.payload.items
         );
         state.totalQuantity = totalQuantity;
         state.totalAmount = totalAmount;
+      })
+      .addCase(addItemToCart.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.error.message || "Failed to add item to cart";
       })
       .addCase(removeItemFromCart.fulfilled, (state, action) => {
         state.items = action.payload.items;

@@ -5,6 +5,8 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { getOrderById } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
+import UserOrderDetailSkeleton from '@/components/account/UserOrderDetailSkeleton';
+import { AxiosError } from 'axios';
 
 interface OrderListingInfo {
   listingId: string;
@@ -52,11 +54,17 @@ const UserOrderDetail = () => {
       try {
         const data = await getOrderById(id);
         setOrder(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch order details");
+      } catch (err: unknown) {
+        let errorMessage = "Failed to fetch order details";
+        if (err instanceof AxiosError && err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage);
         toast({
           title: "Error",
-          description: err.message || "Failed to fetch order details",
+          description: errorMessage,
           variant: "destructive",
         });
       } finally {
@@ -83,15 +91,7 @@ const UserOrderDetail = () => {
   };
 
   if (loading) {
-    return (
-      <div className="container-custom mx-auto py-8">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Loading order details...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <UserOrderDetailSkeleton />;
   }
 
   if (error) {

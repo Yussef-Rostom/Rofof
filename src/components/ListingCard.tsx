@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDispatch, useSelector } from 'react-redux';
 import { addItemToCart } from '../store/cartSlice';
-import { RootState } from "@/store";
+import { RootState, AppDispatch } from "@/store";
+import { useToast } from "@/hooks/use-toast";
+import { Spinner } from "./ui/spinner";
 
 interface ListingCardProps {
   _id: string;
@@ -17,16 +19,48 @@ interface ListingCardProps {
 }
 
 export const ListingCard = ({ _id, title, author, price, condition, category, imageUrls }: ListingCardProps) => {
-  const dispatch = useDispatch();
+  const dispatch: AppDispatch = useDispatch();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { isAuthenticated } = useSelector((state: RootState) => state.user);
+  const { items: cartItems, status: cartStatus } = useSelector((state: RootState) => state.cart);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!isAuthenticated) {
       navigate("/login");
       return;
     }
-    dispatch(addItemToCart({ listingId: _id, quantity: 1 }));
+
+    const isAlreadyInCart = cartItems.some(item => (typeof item.listing === 'object' ? item.listing._id : item.listing) === _id);
+
+    if (isAlreadyInCart) {
+      toast({
+        title: "Already in cart",
+        description: `${title} is already in your cart.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await dispatch(addItemToCart({ listingId: _id, quantity: 1 })).unwrap();
+      toast({
+        title: "Added to cart",
+        description: `${title} has been added to your cart.`,
+      });
+    } catch (err) {
+      let errorMessage = "An unknown error occurred.";
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = (err as { message: string }).message;
+      }
+      toast({
+        title: "Failed to add to cart",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -50,7 +84,9 @@ export const ListingCard = ({ _id, title, author, price, condition, category, im
       </Link>
       <CardFooter className="p-4 pt-0 flex justify-between items-center">
         <p className="font-display text-2xl font-semibold text-primary">${price}</p>
-        <Button onClick={handleAddToCart}>Add to Cart</Button>
+        <Button onClick={handleAddToCart} disabled={cartStatus === 'loading'}>
+          {cartStatus === 'loading' ? <Spinner size="sm" /> : 'Add to Cart'}
+        </Button>
       </CardFooter>
     </Card>
   );

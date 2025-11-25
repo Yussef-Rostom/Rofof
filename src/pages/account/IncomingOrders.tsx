@@ -15,6 +15,7 @@ import { Eye } from "lucide-react";
 import { getMySales } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import IncomingOrdersPageSkeleton from '@/pages/account/IncomingOrdersPageSkeleton';
+import { AxiosError } from 'axios';
 
 interface OrderItem {
   listingInfo: {
@@ -27,7 +28,7 @@ interface OrderItem {
 
 interface Order {
   _id: string;
-  orderDate: string;
+  createdAt: string;
   items: OrderItem[];
   totalPrice: number;
   status: "Pending" | "Shipped" | "Delivered" | "Cancelled";
@@ -48,11 +49,17 @@ function IncomingOrders() {
       try {
         const data = await getMySales();
         setOrders(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch sales orders");
+      } catch (err: unknown) {
+        let errorMessage = "Failed to fetch sales orders";
+        if (err instanceof AxiosError && err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage);
         toast({
           title: "Error",
-          description: err.message || "Failed to fetch sales orders",
+          description: errorMessage,
           variant: "destructive",
         });
       } finally {
@@ -142,7 +149,7 @@ function IncomingOrders() {
                       <TableCell>{order.items?.length || 0} listing(s)</TableCell>
                       <TableCell>${order.totalPrice.toFixed(2)}</TableCell>
                       <TableCell>
-                        {new Date(order.orderDate).toLocaleDateString()}
+                        {new Date(order.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(order.status)}>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { DataTable } from "@/components/admin/DataTable";
 import { SearchBar } from "@/components/admin/SearchBar";
@@ -43,25 +43,31 @@ export default function Users() {
   const currentLoggedInUser = useSelector((state: RootState) => state.user.user);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get("/admin/users");
       setUsers(response.data);
-    } catch (error) {
+    } catch (err: unknown) {
+      let errorMessage = "Failed to fetch users.";
+      if (isAxiosError(err) && err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
       toast({
         title: "Error",
-        description: "Failed to fetch users.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchUsers();
-  }, [toast]);
+  }, [fetchUsers]);
 
   const handleRoleChange = async (userId: string, checked: boolean) => {
     if (!currentLoggedInUser) {
@@ -255,7 +261,7 @@ export default function Users() {
         </Dialog>
       </div>
 
-      <DataTable data={filteredUsers} columns={columns} />
+      <DataTable<User> data={filteredUsers} columns={columns} />
     </div>
   );
 }

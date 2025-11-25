@@ -1,10 +1,12 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, ShoppingCart, User, BookOpen } from "lucide-react";
+import { BookOpen, Menu, ShoppingCart, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDispatch, useSelector } from "react-redux";
-import { logoutUser } from "../store/userSlice";
 import { RootState, AppDispatch } from "../store";
+import { useState } from "react";
+import { UserNav } from "./UserNav";
+import { UserNavMobile } from "./UserNavMobile";
+import { logoutUser } from "../store/userSlice";
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,10 +15,6 @@ export const Navbar = () => {
     (state: RootState) => state.user
   );
   const { totalQuantity } = useSelector((state: RootState) => state.cart);
-
-  const handleLogout = () => {
-    dispatch(logoutUser());
-  };
 
   return (
     <nav className="sticky top-0 z-50 bg-card border-b border-border shadow-sm">
@@ -44,6 +42,9 @@ export const Navbar = () => {
             >
               Sell a Listing
             </Link>
+          </div>
+
+          <div className="flex items-center gap-4">
             <Link to="/cart" className="relative">
               <ShoppingCart className="h-5 w-5 text-foreground hover:text-primary transition-colors" />
               {totalQuantity > 0 && (
@@ -52,50 +53,50 @@ export const Navbar = () => {
                 </span>
               )}
             </Link>
-            {user?.role === "admin" && (
-              <Link to="/admin">
-                <Button variant="ghost" size="sm">
-                  Admin
-                </Button>
-              </Link>
-            )}
-            {isAuthenticated ? (
-              <>
-                <Link to="/account">
-                  <Button variant="ghost" size="sm">
-                    Account
-                  </Button>
-                </Link>
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link to="/login">
-                  <Button variant="ghost" size="sm">
-                    <User className="mr-2 h-4 w-4" />
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button size="sm">Sign Up</Button>
-                </Link>
-              </>
-            )}
+            <div className="hidden md:block">
+              {isAuthenticated ? (
+                <UserNav />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link to="/login">
+                    <Button variant="ghost" size="sm">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link to="/register">
+                    <Button size="sm">
+                      Sign Up
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden p-2"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {isOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
           </div>
-
-          {/* Mobile Menu Button */}
-          <button className="md:hidden p-2" onClick={() => setIsOpen(!isOpen)}>
-            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
         </div>
 
         {/* Mobile Navigation */}
         <div
-          className={`fixed right-0 top-16 bottom-0 w-3/4 max-w-sm bg-card p-4 overflow-y-auto transition-transform duration-300 ease-in-out transform md:hidden ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className={`fixed right-0 top-16 bottom-0 w-3/4 max-w-sm bg-card p-4 overflow-y-auto transition-transform duration-300 ease-in-out transform md:hidden ${
+            isOpen ? "translate-x-0" : "translate-x-full"
+          }`}
         >
           <div className="flex flex-col gap-4">
+            {isAuthenticated && (
+              <div className="border-b border-border pb-4">
+                <UserNavMobile />
+              </div>
+            )}
             <Link
               to="/listings"
               className="text-foreground hover:text-primary hover:bg-accent transition-colors py-2 px-3 rounded-md"
@@ -110,14 +111,7 @@ export const Navbar = () => {
             >
               Sell a Listing
             </Link>
-            <Link
-              to="/cart"
-              className="flex items-center gap-2 text-foreground hover:text-primary hover:bg-accent transition-colors py-2 px-3 rounded-md"
-              onClick={() => setIsOpen(false)}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              Cart ({totalQuantity})
-            </Link>
+
             <div className="flex flex-col gap-2 pt-2 border-t border-border">
               {user?.role === "admin" && (
                 <Link
@@ -129,21 +123,15 @@ export const Navbar = () => {
                 </Link>
               )}
               {isAuthenticated ? (
-                <>
-                  <Link
-                    to="/account"
-                    className="text-foreground hover:text-primary hover:bg-accent transition-colors w-full py-2 px-3 rounded-md"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Account
-                  </Link>
-                  <button
-                    className="text-foreground hover:text-primary hover:bg-accent transition-colors w-full text-left py-2 px-3 rounded-md"
-                    onClick={() => { handleLogout(); setIsOpen(false); }}
-                  >
-                    Logout
-                  </button>
-                </>
+                <button
+                  className="text-foreground hover:text-primary hover:bg-accent transition-colors w-full text-left py-2 px-3 rounded-md"
+                  onClick={() => {
+                    dispatch(logoutUser());
+                    setIsOpen(false);
+                  }}
+                >
+                  Logout
+                </button>
               ) : (
                 <>
                   <Link

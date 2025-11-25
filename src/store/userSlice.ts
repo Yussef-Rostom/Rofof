@@ -2,6 +2,18 @@ import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 import { User, UserState } from "../types";
 import api from "@/lib/api";
 import { clearCart } from "./cartSlice";
+import { AxiosError } from "axios";
+
+interface RegisterUserData {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
 
 const initialState: UserState = {
   user: null,
@@ -13,22 +25,24 @@ const initialState: UserState = {
 // Async Thunks
 export const registerUser = createAsyncThunk(
   "user/register",
-  async (userData: any, { rejectWithValue }) => {
+  async (userData: RegisterUserData, { rejectWithValue }) => {
     try {
       const response = await api.post("/auth/register", userData);
       localStorage.setItem("accessToken", response.data.accessToken);
       localStorage.setItem("refreshToken", response.data.refreshToken);
       return response.data.user;
-    } catch (error: any) {
+    } catch (error: unknown) {
       let errorMessage = "An unknown error occurred during registration.";
-      if (error.response && error.response.data) {
+      if (error instanceof AxiosError && error.response?.data) {
         if (Array.isArray(error.response.data.errors)) {
           errorMessage = error.response.data.errors
-            .map((err: any) => err.msg)
+            .map((err: { msg?: string }) => err.msg || "Unknown error")
             .join(" ");
         } else if (error.response.data.message) {
           errorMessage = error.response.data.message;
         }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
       }
       return rejectWithValue(errorMessage);
     }
@@ -37,22 +51,24 @@ export const registerUser = createAsyncThunk(
 
 export const loginUser = createAsyncThunk(
   "user/login",
-  async (credentials: any, { rejectWithValue }) => {
+  async (credentials: LoginCredentials, { rejectWithValue }) => {
     try {
       const response = await api.post("/auth/login", credentials);
       localStorage.setItem("accessToken", response.data.accessToken);
       localStorage.setItem("refreshToken", response.data.refreshToken);
       return response.data.user;
-    } catch (error: any) {
+    } catch (error: unknown) {
       let errorMessage = "An unknown error occurred during login.";
-      if (error.response && error.response.data) {
+      if (error instanceof AxiosError && error.response?.data) {
         if (Array.isArray(error.response.data.errors)) {
           errorMessage = error.response.data.errors
-            .map((err: any) => err.msg)
+            .map((err: { msg?: string }) => err.msg || "Unknown error")
             .join(" ");
         } else if (error.response.data.message) {
           errorMessage = error.response.data.message;
         }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
       }
       return rejectWithValue(errorMessage);
     }
@@ -65,10 +81,16 @@ export const fetchMe = createAsyncThunk(
     try {
       const response = await api.get("/auth/me");
       return response.data.user;
-    } catch (error: any) {
+    } catch (error: unknown) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
-      return rejectWithValue(error.response?.data?.message || error.message);
+      let errorMessage = "Failed to fetch user data.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -83,8 +105,14 @@ export const logoutUser = createAsyncThunk(
       localStorage.removeItem("refreshToken");
       dispatch(clearCart());
       return true;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message);
+    } catch (error: unknown) {
+      let errorMessage = "Failed to logout.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      return rejectWithValue(errorMessage);
     }
   }
 );

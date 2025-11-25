@@ -2,9 +2,7 @@ import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../lib/api';
 import { AppDispatch } from './index';
 import { Listing, Seller, ListingState } from '@/types';
-
-
-
+import { AxiosError } from 'axios';
 
 
 const initialState: ListingState = {
@@ -24,8 +22,13 @@ export const addListing = createAsyncThunk(
     try {
       const response = await api.post('/listings', listingData);
       return response.data;
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.message || "Failed to add listing.";
+    } catch (error: unknown) {
+      let message = "Failed to add listing.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       return rejectWithValue(message);
     }
   }
@@ -41,8 +44,13 @@ export const uploadListingImage = createAsyncThunk(
         },
       });
       return response.data;
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.message || "Failed to upload image.";
+    } catch (error: unknown) {
+      let message = "Failed to upload image.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       return rejectWithValue(message);
     }
   }
@@ -54,8 +62,13 @@ export const fetchListings = createAsyncThunk(
     try {
       const response = await api.get(`/listings`);
       return response.data;
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.message || "Failed to fetch listings.";
+    } catch (error: unknown) {
+      let message = "Failed to fetch listings.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       return rejectWithValue(message);
     }
   }
@@ -67,8 +80,13 @@ export const fetchFeaturedListings = createAsyncThunk(
     try {
       const response = await api.get('/listings/featured');
       return response.data;
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.message || "Failed to fetch featured listings.";
+    } catch (error: unknown) {
+      let message = "Failed to fetch featured listings.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       return rejectWithValue(message);
     }
   }
@@ -80,8 +98,13 @@ export const fetchListingDetails = createAsyncThunk(
     try {
       const response = await api.get<Listing>(`/listings/${id}`);
       return response.data;
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.message || "Failed to fetch listing details.";
+    } catch (error: unknown) {
+      let message = "Failed to fetch listing details.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       return rejectWithValue(message);
     }
   }
@@ -93,8 +116,13 @@ export const updateListing = createAsyncThunk(
     try {
       const response = await api.put(`/listings/${id}`, listingData);
       return response.data;
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.message || "Failed to update listing.";
+    } catch (error: unknown) {
+      let message = "Failed to update listing.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       return rejectWithValue(message);
     }
   }

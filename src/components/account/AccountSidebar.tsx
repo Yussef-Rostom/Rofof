@@ -1,11 +1,15 @@
 import { NavLink } from "react-router-dom";
-import { BookOpen } from "lucide-react";
+import {
+  BookOpen,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { menuItems } from "./adminMenuItems";
+import { accountNavItems } from "./accountNavItems";
 
-export function AdminSidebar() {
+export function AccountSidebar() {
   const { user } = useSelector((state: RootState) => state.user);
   return (
     <div className="hidden border-r bg-muted/40 md:block">
@@ -34,7 +38,7 @@ export function AdminSidebar() {
             </div>
           )}
           <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-            {menuItems.map((item) => (
+            {accountNavItems.map((item) => (
               <NavLink
                 key={item.title}
                 to={item.url}

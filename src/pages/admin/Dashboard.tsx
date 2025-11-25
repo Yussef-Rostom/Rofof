@@ -4,6 +4,7 @@ import { Users, BookOpen, ShoppingCart, DollarSign } from "lucide-react";
 import { getDashboardStats } from "@/lib/api";
 import { Link } from "react-router-dom";
 import DashboardSkeleton from "@/components/admin/DashboardSkeleton";
+import { AxiosError } from "axios";
 
 interface DashboardStats {
   totalUsers: number;
@@ -33,8 +34,14 @@ export default function Dashboard() {
       try {
         const response = await getDashboardStats();
         setDashboardData(response);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch dashboard data");
+      } catch (err: unknown) {
+        let errorMessage = "Failed to fetch dashboard data";
+        if (err instanceof AxiosError && err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage);
         setDashboardData(null);
       } finally {
         setLoading(false);

@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { AxiosError } from 'axios';
 
 // Define a simplified OrderData type for the frontend, matching what the backend expects
 interface FrontendOrderData {
@@ -100,10 +101,16 @@ const Checkout = () => {
           description: "Your order has been placed successfully with Cash on Delivery.",
         });
         navigate('/'); // Redirect to home or an order confirmation page
-      } catch (error: any) {
+      } catch (err: unknown) {
+        let errorMessage = "An unexpected error occurred. Please try again.";
+        if (err instanceof AxiosError && err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
         toast({
           title: "Error placing order",
-          description: error.response?.data?.message || "An unexpected error occurred. Please try again.",
+          description: errorMessage,
           variant: "destructive",
         });
       } finally {

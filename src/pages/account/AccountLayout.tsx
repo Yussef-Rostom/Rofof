@@ -1,106 +1,104 @@
-import { Outlet, NavLink } from "react-router-dom";
-import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { User, ShoppingBag, Package, ShoppingCart } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
-const accountNavItems = [
-  {
-    title: "Profile Settings",
-    url: "/account/profile",
-    icon: User,
-  },
-  {
-    title: "My Listings",
-    url: "/account/listings",
-    icon: ShoppingBag,
-  },
-  {
-    title: "Incoming Orders",
-    url: "/account/orders",
-    icon: Package,
-  },
-  {
-    title: "Purchase History",
-    url: "/account/purchases",
-    icon: ShoppingCart,
-  },
-];
+import { Link, Outlet, useLocation } from "react-router-dom";
+import {
+  BookOpen,
+  CircleUser,
+  Menu,
+  Home,
+  Gauge,
+} from "lucide-react";
 
-function AccountSidebar() {
-  const { open } = useSidebar();
-  const { user } = useSelector((state: RootState) => state.user);
+import { Button } from "@/components/ui/button";
 
-  return (
-    <Sidebar collapsible="icon" className="mt-16">
-      <SidebarContent>
-        {open && user && (
-          <div className="flex items-center gap-3 p-2 mb-4 hover:bg-accent/50 rounded-md transition-colors cursor-pointer">
-            <Avatar className="h-9 w-9">
-              <AvatarImage src={user.avatar} alt={user.fullName} />
-              <AvatarFallback>{user.fullName[0]}</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <span className="font-semibold text-foreground">{user.fullName}</span>
-              <span className="text-sm text-muted-foreground">{user.email}</span>
-            </div>
-          </div>
-        )}
-        <SidebarGroup>
-          <SidebarGroupLabel>My Account</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {accountNavItems.map((item) => (
-                <SidebarMenuItem key={item.title} className="group hover:bg-accent/50 rounded-md transition-colors">
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 text-foreground transition-colors py-2 px-3 rounded-md ${isActive ? "bg-accent font-medium is-active border-l-4 border-primary" : ""}`
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
-  );
-}
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { AccountSidebar } from "@/components/account/AccountSidebar";
+import { accountNavItems } from "@/components/account/accountNavItems";
+import { AdminBreadcrumb } from "@/components/admin/Breadcrumb";
+
 
 export default function AccountLayout() {
+  const location = useLocation();
+  const pathnames = location.pathname.split("/").filter((x) => x);
+  const title = pathnames[pathnames.length - 1];
+
+  const user = useSelector((state: RootState) => state.user.user);
+  const isAdmin = user?.role === "admin";
+
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AccountSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-16 border-b bg-background flex items-center px-6">
-            <SidebarTrigger className="-ml-1" />
-            <h1 className="ml-4 text-xl font-display font-semibold">
-              My Account
+    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+      <AccountSidebar />
+      <div className="flex flex-col">
+        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0 md:hidden"
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex flex-col">
+              <nav className="grid gap-2 text-lg font-medium">
+                <Link
+                  to="#"
+                  className="flex items-center gap-2 text-lg font-semibold"
+                >
+                  <BookOpen className="h-6 w-6 text-primary" />
+                  <span className="sr-only">Rofof</span>
+                </Link>
+                {accountNavItems.map((item) => (
+                  <Link
+                    key={item.title}
+                    to={item.url}
+                    className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {item.title}
+                  </Link>
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
+          <div className="flex-1"></div> {/* This will push the buttons to the right */}
+          <Link to="/">
+            <Button variant="outline" size="sm">
+              Home
+            </Button>
+          </Link>
+          {isAdmin && (
+            <Link to="/admin">
+              <Button variant="outline" size="sm">
+                Admin
+              </Button>
+            </Link>
+          )}
+
+
+        </header>
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+          <div className="flex items-center">
+            <h1 className="text-lg font-semibold md:text-2xl capitalize">
+              {title}
             </h1>
-          </header>
-          <main className="flex-1 p-6 bg-muted/30">
-            <Outlet />
-          </main>
-        </div>
+          </div>
+          <AdminBreadcrumb />
+          <Outlet />
+        </main>
       </div>
-    </SidebarProvider>
+    </div>
   );
 }

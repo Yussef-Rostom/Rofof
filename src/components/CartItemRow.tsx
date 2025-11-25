@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { removeItemFromCart } from "@/store/cartSlice";
 import { AppDispatch } from "@/store";
 import { Listing } from "@/types";
+import { AxiosError } from "axios";
 
 interface CartItemProps {
   item: {
@@ -27,10 +28,16 @@ const CartItemRow: React.FC<CartItemProps> = ({ item }) => {
         title: "Item Removed",
         description: "Item successfully removed from your cart.",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      let errorMessage = "Please try again.";
+      if (err instanceof AxiosError && err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
       toast({
         title: "Failed to remove item",
-        description: err.message || "Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }

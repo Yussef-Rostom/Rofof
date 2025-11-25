@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { toast } from "sonner";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -9,10 +10,15 @@ const api = axios.create({
   },
 });
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
+interface FailedQueueItem {
+  resolve: (value: string | PromiseLike<string> | null) => void;
+  reject: (reason?: AxiosError) => void;
+}
 
-const processQueue = (error: any, token: string | null = null) => {
+let isRefreshing = false;
+let failedQueue: FailedQueueItem[] = [];
+
+const processQueue = (error: AxiosError | null, token: string | null = null) => {
   failedQueue.forEach(prom => {
     if (error) {
       prom.reject(error);
@@ -32,27 +38,27 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for handling token refresh
+// Response interceptor for handling token refresh and global error display
 api.interceptors.response.use(
-  (response) => {
+  (response: AxiosResponse) => {
     return response;
   },
-  async (error) => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // If error status is 401 and it's not a refresh token request
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {
-        return new Promise(function(resolve, reject) {
+        return new Promise<string | null>(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
         })
           .then(token => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+            originalRequest.headers!.Authorization = `Bearer ${token}`;
             return api(originalRequest);
           })
           .catch(err => {
@@ -67,6 +73,8 @@ api.interceptors.response.use(
 
       if (!refreshToken) {
         // No refresh token, redirect to login or handle as unauthenticated
+        // Display a toast message for unauthenticated access
+        toast.error("You are not authenticated. Please log in.");
         // For now, just reject the request
         return Promise.reject(error);
       }
@@ -84,10 +92,12 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
+        processQueue(refreshError as AxiosError, null);
         // Clear tokens and redirect to login on refresh failure
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        // Display a toast message for refresh failure
+        toast.error("Session expired. Please log in again.");
         // Optionally, redirect to login page
         window.location.href = '/login';
         return Promise.reject(refreshError);
@@ -96,71 +106,47 @@ api.interceptors.response.use(
       }
     }
 
+    // Handle other errors globally
+    const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
+    toast.error(errorMessage);
+
     return Promise.reject(error);
   }
 );
 
-export const placeOrder = async (orderData: { shippingAddress: any }) => {
-  try {
-    const response = await api.post('/orders', orderData);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+export const placeOrder = async (orderData: { shippingAddress: Address }) => {
+  const response = await api.post('/orders', orderData);
+  return response.data;
 };
 
 export const getMyOrders = async () => {
-  try {
-    const response = await api.get('/orders/my-orders');
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.get('/orders/my-orders');
+  return response.data;
 };
 
 export const getMySales = async () => {
-  try {
-    const response = await api.get('/orders/my-sales');
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.get('/orders/my-sales');
+  return response.data;
 };
 
 export const getOrderById = async (id: string) => {
-  try {
-    const response = await api.get(`/admin/orders/${id}`);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.get(`/admin/orders/${id}`);
+  return response.data;
 };
 
 export const getAdminOrders = async () => {
-  try {
-    const response = await api.get('/admin/orders');
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.get('/admin/orders');
+  return response.data;
 };
 
 export const updateOrderStatus = async (id: string, status: string) => {
-  try {
-    const response = await api.put(`/admin/orders/${id}/status`, { status });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.put(`/admin/orders/${id}/status`, { status });
+  return response.data;
 };
 
 export const getDashboardStats = async () => {
-  try {
-    const response = await api.get('/admin/dashboard');
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await api.get('/admin/dashboard');
+  return response.data;
 };
 
 export default api;

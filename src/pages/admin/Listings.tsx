@@ -125,6 +125,7 @@ export default function Listings() {
         <SearchBar
           placeholder="Search by title or author..."
           value={searchQuery}
+
           onChange={setSearchQuery}
         />
       </div>

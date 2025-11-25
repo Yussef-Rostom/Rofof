@@ -2,9 +2,8 @@ import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../lib/api";
 import { setUser, fetchMe, setUserAvatar } from "./userSlice";
 import { AccountState } from "../types";
-
-
-
+import { AxiosError } from "axios";
+import { AppDispatch } from ".";
 
 
 const initialState: AccountState = {
@@ -27,11 +26,13 @@ export const updateUserProfile = createAsyncThunk(
       const response = await api.put("/account/profile", profileData);
       (dispatch as AppDispatch)(fetchMe()); // Dispatch fetchMe here
       return response.data;
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to update profile.";
+    } catch (error: unknown) {
+      let message = "Failed to update profile.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       return rejectWithValue(message);
     }
   }
@@ -44,21 +45,23 @@ export const updateUserEmail = createAsyncThunk(
       const response = await api.put("/account/email", emailData);
       (dispatch as AppDispatch)(fetchMe()); // Dispatch fetchMe here
       return response.data;
-    } catch (error: any) {
-      let message =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to update email.";
+    } catch (error: unknown) {
+      let message = "Failed to update email.";
 
-      // Check for MongoDB duplicate key error for email
-      if (
-        error.response?.data?.error &&
-        typeof error.response.data.error === "string" &&
-        error.response.data.error.includes("E11000 duplicate key error") &&
-        error.response.data.error.includes("email_1")
-      ) {
-        message =
-          "This email is already registered. Please use a different email address.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+        // Check for MongoDB duplicate key error for email
+        if (
+          error.response?.data?.error &&
+          typeof error.response.data.error === "string" &&
+          error.response.data.error.includes("E11000 duplicate key error") &&
+          error.response.data.error.includes("email_1")
+        ) {
+          message =
+            "This email is already registered. Please use a different email address.";
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
       }
 
       return rejectWithValue(message);
@@ -75,11 +78,13 @@ export const changeUserPassword = createAsyncThunk(
     try {
       const response = await api.put("/account/password", passwordData);
       return response.data;
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to change password.";
+    } catch (error: unknown) {
+      let message = "Failed to change password.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       return rejectWithValue(message);
     }
   }
@@ -96,11 +101,13 @@ export const uploadProfileImage = createAsyncThunk(
       });
       dispatch(setUserAvatar(response.data.imageUrl)); // Update user avatar directly
       return response.data;
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to upload image.";
+    } catch (error: unknown) {
+      let message = "Failed to upload image.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       return rejectWithValue(message);
     }
   }
@@ -113,11 +120,13 @@ export const fetchAccountProfile = createAsyncThunk(
       const response = await api.get("/account/profile");
       dispatch(setUser(response.data));
       return response.data;
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to fetch account profile.";
+    } catch (error: unknown) {
+      let message = "Failed to fetch account profile.";
+      if (error instanceof AxiosError && error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
       return rejectWithValue(message);
     }
   }

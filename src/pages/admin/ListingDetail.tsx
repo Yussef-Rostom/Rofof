@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Listing, User } from "@/types";
+import ListingDetailsSkeleton from "@/components/ListingDetailsSkeleton"; // Import the skeleton component
 
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
@@ -76,21 +77,7 @@ export default function ListingDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/admin/listings">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Listings
-            </Button>
-          </Link>
-        </div>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading listing details...</p>
-        </div>
-      </div>
-    );
+    return <ListingDetailsSkeleton />;
   }
 
   if (error) {
@@ -264,5 +251,6 @@ export default function ListingDetail() {
     </div>
   );
 }
+
 
 

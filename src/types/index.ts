@@ -42,6 +42,7 @@ export interface SellerStats {
 }
 
 export interface User {
+  [key: string]: any; // Added index signature
   _id: string;
   fullName: string;
   email: string;

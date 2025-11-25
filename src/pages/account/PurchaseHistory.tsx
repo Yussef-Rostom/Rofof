@@ -15,6 +15,7 @@ import { Eye } from "lucide-react";
 import { getMyOrders } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import PurchaseHistoryPageSkeleton from '@/pages/account/PurchaseHistoryPageSkeleton';
+import { AxiosError } from 'axios';
 
 interface OrderItem {
   listingInfo: {
@@ -48,11 +49,17 @@ function PurchaseHistory() {
       try {
         const data = await getMyOrders();
         setOrders(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch orders");
+      } catch (err: unknown) {
+        let errorMessage = "Failed to fetch orders";
+        if (err instanceof AxiosError && err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage);
         toast({
           title: "Error",
-          description: err.message || "Failed to fetch orders",
+          description: errorMessage,
           variant: "destructive",
         });
       } finally {

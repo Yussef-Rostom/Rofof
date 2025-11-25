@@ -16,6 +16,7 @@ import {
 import { ArrowLeft, XCircle, Truck, CheckCircle2, Hourglass, RefreshCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AxiosError } from "axios";
 
 // Another dummy comment to force re-transpilation
 export default function OrderDetail() {
@@ -33,8 +34,14 @@ export default function OrderDetail() {
     try {
       const response = await getOrderById(id);
       setOrder(response);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch order");
+    } catch (err: unknown) {
+      let errorMessage = "Failed to fetch order";
+      if (err instanceof AxiosError && err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
       setOrder(null);
     } finally {
       setLoading(false);
@@ -56,10 +63,16 @@ export default function OrderDetail() {
         description: `Order ${order._id} status changed to ${newStatus}`,
       });
       fetchOrder(); // Re-fetch order to update UI
-    } catch (err: any) {
+    } catch (err: unknown) {
+      let errorMessage = "An error occurred while updating order status";
+      if (err instanceof AxiosError && err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
       toast({
         title: "Failed to Update Status",
-        description: err.message || "An error occurred while updating order status",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
