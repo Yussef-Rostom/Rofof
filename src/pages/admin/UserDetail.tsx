@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, UserCheck, UserX, MoreVertical, Key, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api";
 import { User, Listing, OrderData } from "@/types";
 import { useSelector } from "react-redux";
@@ -36,7 +36,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { isAxiosError } from "axios";
+import { isAxiosError, AxiosError } from "axios";
+import UserDetailSkeleton from "@/components/admin/UserDetailSkeleton";
 
 export default function UserDetail() {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +49,7 @@ export default function UserDetail() {
   const [loading, setLoading] = useState(true);
   const currentLoggedInUser = useSelector((state: RootState) => state.user.user);
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
@@ -63,20 +64,26 @@ export default function UserDetail() {
       const ordersResponse = await api.get<OrderData[]>(`/admin/users/${id}/orders`);
       setUserOrders(ordersResponse.data);
 
-    } catch (error) {
+    } catch (error: unknown) {
+      let errorMessage = "Failed to fetch user details.";
+      if (isAxiosError(error) && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
       toast({
         title: "Error",
-        description: "Failed to fetch user details.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, toast]);
 
   useEffect(() => {
     fetchUserData();
-  }, [id, toast]);
+  }, [fetchUserData]);
 
   const handleRoleChange = async (newRole: "user" | "admin") => {
     if (!user || !currentLoggedInUser) {
@@ -104,10 +111,16 @@ export default function UserDetail() {
         description: `User role updated to ${newRole}.`,
       });
       fetchUserData(); // Refresh user data
-    } catch (error: any) {
+    } catch (err: unknown) {
+      let errorMessage = "Failed to update user role.";
+      if (isAxiosError(err) && err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to update user role.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -132,10 +145,16 @@ export default function UserDetail() {
         title: "Password Reset",
         description: `Password for ${user.email} reset to: ${newPassword}. Please communicate this securely to the user.`, // Display generated password
       });
-    } catch (error: any) {
+    } catch (err: unknown) {
+      let errorMessage = "Failed to send password reset email.";
+      if (isAxiosError(err) && err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to send password reset email.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -181,7 +200,7 @@ export default function UserDetail() {
   };
 
   if (loading) {
-    return <div>Loading user details...</div>;
+    return <UserDetailSkeleton />;
   }
 
   if (!user) {

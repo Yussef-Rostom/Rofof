@@ -1,4 +1,5 @@
 export interface Listing {
+  [key: string]: unknown; // Add index signature here
   _id: string;
   title: string;
   author: string;
@@ -48,6 +49,8 @@ export interface User {
   profile: UserProfile;
   sellerStats: SellerStats;
   address?: Address; // Changed to Address interface
+  createdAt:string;
+  updatedAt:string;
 }
 
 export interface UserState {
@@ -115,6 +118,7 @@ export interface Address {
 }
 
 export interface OrderData {
+  [key: string]: unknown; // Added index signature
   _id: string;
   buyer: User; // Changed from string to User
   seller: User; // Added seller

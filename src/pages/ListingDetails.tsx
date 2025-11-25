@@ -6,11 +6,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ShoppingCart, ArrowLeft, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
 import { fetchListingDetails, clearCurrentListing } from "@/store/listingSlice";
 import { addItemToCart } from "@/store/cartSlice";
+import { Spinner } from "@/components/ui/spinner";
+import { isAxiosError, AxiosError } from "axios";
+import ListingDetailsSkeleton from "@/components/ListingDetailsSkeleton";
 
 export default function ListingDetails() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +21,7 @@ export default function ListingDetails() {
   const navigate = useNavigate();
   const { currentListing: listing, currentSeller: seller, loading, error } = useSelector((state: RootState) => state.listing);
   const { isAuthenticated } = useSelector((state: RootState) => state.user);
+  const { items: cartItems, status: cartStatus } = useSelector((state: RootState) => state.cart);
 
   useEffect(() => {
     if (id) {
@@ -29,52 +32,47 @@ export default function ListingDetails() {
     };
   }, [id, dispatch]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!isAuthenticated) {
       navigate("/login");
       return;
     }
     if (listing) {
-      dispatch(addItemToCart({ listingId: listing._id, quantity: 1 }));
-      toast({
-        title: "Added to cart",
-        description: `${listing.title} has been added to your cart.`,
-      });
+      const isAlreadyInCart = cartItems.some(item => (typeof item.listing === 'object' ? item.listing._id : item.listing) === listing._id);
+
+      if (isAlreadyInCart) {
+        toast({
+          title: "Already in cart",
+          description: `${listing.title} is already in your cart.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        await dispatch(addItemToCart({ listingId: listing._id, quantity: 1 })).unwrap();
+        toast({
+          title: "Added to cart",
+          description: `${listing.title} has been added to your cart.`,
+        });
+      } catch (err: unknown) {
+        let errorMessage = "An error occurred while adding to cart.";
+        if (isAxiosError(err) && err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        toast({
+          title: "Failed to add to cart",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     }
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen py-8">
-        <div className="container-custom">
-          <Skeleton className="h-6 w-48 mb-6" />
-          <div className="grid lg:grid-cols-2 gap-12">
-            <div>
-              <Skeleton className="aspect-[3/4] w-full rounded-lg mb-4" />
-              <div className="grid grid-cols-4 gap-2">
-                <Skeleton className="aspect-square rounded" />
-                <Skeleton className="aspect-square rounded" />
-                <Skeleton className="aspect-square rounded" />
-                <Skeleton className="aspect-square rounded" />
-              </div>
-            </div>
-            <div>
-              <Skeleton className="h-10 w-3/4 mb-2" />
-              <Skeleton className="h-6 w-1/2 mb-4" />
-              <div className="flex gap-2 mb-4">
-                <Skeleton className="h-6 w-20" />
-                <Skeleton className="h-6 w-20" />
-              </div>
-              <Skeleton className="h-10 w-1/4 mb-6" />
-              <Skeleton className="h-6 w-full mb-3" />
-              <Skeleton className="h-24 w-full mb-8" />
-              <Skeleton className="h-32 w-full mb-8" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ListingDetailsSkeleton />;
   }
 
   if (error) {
@@ -177,9 +175,9 @@ export default function ListingDetails() {
               size="lg" 
               className="w-full"
               onClick={handleAddToCart}
+              disabled={cartStatus === 'loading'}
             >
-              <ShoppingCart className="mr-2 h-5 w-5" />
-              Add to Cart
+              {cartStatus === 'loading' ? <Spinner /> : <><ShoppingCart className="mr-2 h-5 w-5" />Add to Cart</>}
             </Button>
           </div>
         </div>

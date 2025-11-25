@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import OrdersPageSkeleton from "@/pages/admin/OrdersPageSkeleton";
+import { AxiosError } from "axios";
 
 export default function Orders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -29,8 +30,14 @@ export default function Orders() {
       try {
         const response = await getAdminOrders();
         setOrders(response);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch orders");
+      } catch (err: unknown) {
+        let errorMessage = "Failed to fetch orders";
+        if (err instanceof AxiosError && err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage);
         setOrders([]);
       } finally {
         setLoading(false);
@@ -133,7 +140,7 @@ export default function Orders() {
         </div>
       </div>
 
-      <DataTable data={filteredOrders} columns={columns} />
+      <DataTable<AdminOrder> data={filteredOrders} columns={columns} />
     </div>
   );
 }
