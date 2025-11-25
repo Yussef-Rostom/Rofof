@@ -24,8 +24,8 @@ export function AccountSidebar() {
           {user && (
             <div className="flex items-center gap-3 p-2 mb-4 hover:bg-accent/50 rounded-md transition-colors cursor-pointer">
               <Avatar className="h-9 w-9">
-                <AvatarImage src={user.profile.avatarUrl} alt={user.fullName} />
-                <AvatarFallback>{user.fullName[0]}</AvatarFallback>
+                <AvatarImage src={user.profile?.avatarUrl} alt={user.fullName || ''} />
+                <AvatarFallback>{user.fullName ? user.fullName[0] : 'U'}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
                 <span className="font-semibold text-foreground">
