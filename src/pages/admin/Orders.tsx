@@ -63,13 +63,13 @@ export default function Orders() {
       key: "listingTitle",
       label: "Listing Title",
       sortable: true,
-      render: (order: AdminOrder) => order.listingInfo.title,
+      render: (order: AdminOrder) => order.listingInfo?.title || "Unknown Listing",
     },
     {
       key: "buyerName",
       label: "Buyer Name",
       sortable: true,
-      render: (order: AdminOrder) => order.buyer.fullName,
+      render: (order: AdminOrder) => order.buyer?.fullName || "Unknown Buyer",
     },
     {
       key: "totalPrice",
@@ -91,8 +91,8 @@ export default function Orders() {
           order.status === "Delivered"
             ? "default"
             : order.status === "Shipped"
-            ? "secondary"
-            : "outline";
+              ? "secondary"
+              : "outline";
         return <Badge variant={variant}>{order.status}</Badge>;
       },
     },

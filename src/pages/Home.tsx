@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { ErrorComponent } from "@/components/ErrorComponent";
 import { Button } from "@/components/ui/button";
 import { ListingCard } from "@/components/ListingCard";
 import { ListingCardSkeleton } from "@/components/ListingCardSkeleton";
@@ -114,9 +115,12 @@ export default function Home() {
             </div>
           )}
           {error && (
-            <p className="text-center text-lg text-destructive">
-              Error: {error}
-            </p>
+            <div className="py-8">
+              <ErrorComponent
+                message={error}
+                onRetry={() => dispatch(fetchFeaturedListings())}
+              />
+            </div>
           )}
           {!loading && !error && featuredListings.length === 0 && (
             <div className="py-8 text-center">

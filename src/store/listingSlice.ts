@@ -181,7 +181,8 @@ const listingSlice = createSlice({
       })
       .addCase(uploadListingImage.fulfilled, (state, action) => {
         state.uploadLoading = false;
-        state.successMessage = "Image uploaded successfully!";
+        // Do not set successMessage here to prevent form reset in AddListing.tsx
+        // state.successMessage = "Image uploaded successfully!"; 
       })
       .addCase(uploadListingImage.rejected, (state, action) => {
         state.uploadLoading = false;
@@ -227,7 +228,7 @@ const listingSlice = createSlice({
           name: action.payload.seller.fullName,
           avatar: action.payload.seller.profile.avatarUrl || "", // Use actual avatarUrl
           rating: 0, // Placeholder
-          totalSales: 0, // Placeholder
+          totalSales: action.payload.seller.sellerStats?.totalSales || 0,
         };
       })
       .addCase(fetchListingDetails.rejected, (state, action) => {

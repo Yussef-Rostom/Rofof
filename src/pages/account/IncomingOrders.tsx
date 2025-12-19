@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { OrderData } from '@/types';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,30 +18,12 @@ import { useNavigate } from 'react-router-dom';
 import IncomingOrdersPageSkeleton from '@/pages/account/IncomingOrdersPageSkeleton';
 import { AxiosError } from 'axios';
 
-interface OrderItem {
-  listingInfo: {
-    title: string;
-    author: string;
-    price: number;
-  };
-  _id: string;
-}
 
-interface Order {
-  _id: string;
-  createdAt: string;
-  items: OrderItem[];
-  totalPrice: number;
-  status: "Pending" | "Shipped" | "Delivered" | "Cancelled";
-  buyer: {
-    fullName: string;
-  };
-}
 
 function IncomingOrders() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,6 +99,8 @@ function IncomingOrders() {
         </p>
       </div>
 
+
+
       {orders.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -145,8 +130,11 @@ function IncomingOrders() {
                   {orders.map((order) => (
                     <TableRow key={order._id}>
                       <TableCell className="font-medium">{order._id}</TableCell>
-                      <TableCell>{order.buyer.fullName}</TableCell>
-                      <TableCell>{order.items?.length || 0} listing(s)</TableCell>
+                      <TableCell>{order.buyer?.fullName || 'N/A'}</TableCell>
+                      <TableCell>
+                        <span className="font-medium">{order.listingInfo?.title}</span>
+                        <span className="text-muted-foreground ml-1">(x{order.listingInfo?.quantity || 1})</span>
+                      </TableCell>
                       <TableCell>${order.totalPrice.toFixed(2)}</TableCell>
                       <TableCell>
                         {new Date(order.createdAt).toLocaleDateString()}

@@ -32,7 +32,7 @@ import PurchaseHistory from "./pages/account/PurchaseHistory";
 import UserOrderDetail from "./pages/account/UserOrderDetail";
 import NotFound from "./pages/NotFound";
 import { fetchCart } from "./store/cartSlice";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner, FullPageSpinner } from "@/components/ui/spinner";
 import MainLayout from "./components/MainLayout";
 
 const queryClient = new QueryClient();
@@ -62,7 +62,7 @@ const App = () => {
   }, [dispatch, userLoading, isAuthCheckComplete, isAuthenticated]);
 
   if (!isAuthCheckComplete) {
-    return <Spinner />;
+    return <FullPageSpinner />;
   }
 
   return (

@@ -17,7 +17,10 @@ export interface ListingSeller {
   _id: string;
   fullName: string;
   email: string;
-  profile: {
+  sellerStats?: {
+    totalSales: number;
+  };
+  profile?: {
     avatarUrl: string;
     bio: string;
   };
@@ -72,6 +75,7 @@ export interface CartState {
   totalAmount: number;
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
+  loadingItemId?: string | null;
 }
 
 export interface AccountState {

@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { toast } from "sonner";
+import { Address } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -107,8 +108,12 @@ api.interceptors.response.use(
     }
 
     // Handle other errors globally
-    const errorMessage = error.response?.data?.message || error.message || "An unexpected error occurred.";
-    toast.error(errorMessage);
+    const skipGlobalErrorHandler = (error.config as any)?.skipGlobalErrorHandler;
+    
+    if (!skipGlobalErrorHandler) {
+      const errorMessage = (error.response?.data as any)?.message || error.message || "An unexpected error occurred.";
+      toast.error(errorMessage);
+    }
 
     return Promise.reject(error);
   }
@@ -126,6 +131,11 @@ export const getMyOrders = async () => {
 
 export const getMySales = async () => {
   const response = await api.get('/orders/my-sales');
+  return response.data;
+};
+
+export const getUserOrderById = async (id: string) => {
+  const response = await api.get(`/orders/${id}`);
   return response.data;
 };
 

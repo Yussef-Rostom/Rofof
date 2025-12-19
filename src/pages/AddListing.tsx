@@ -1,5 +1,7 @@
 import { useRef, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,26 +9,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { categories } from "@/lib/mockData";
-import { useToast } from "@/hooks/use-toast";
-import { Upload, X } from "lucide-react";
+import { toast } from "sonner";
+import { Upload, X, Loader2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { addListing, uploadListingImage, clearMessages, updateListing } from "../store/listingSlice";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 
-interface IFormInput {
-  title: string;
-  author: string;
-  description: string;
-  price: number;
-  condition: string;
-  category: string;
-  imageUrls: string[];
-}
+const listingSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title must be less than 100 characters"),
+  author: z.string().min(2, "Author name must be at least 2 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description must be less than 2000 characters"),
+  price: z.preprocess((val) => Number(val), z.number().min(0.01, "Price must be greater than 0")),
+  condition: z.string().min(1, "Please select a condition"),
+  category: z.string().min(1, "Please select a category"),
+  imageUrls: z.array(z.string()).min(1, "Please upload at least one image").max(5, "You can only upload up to 5 images"),
+});
+
+type ListingFormValues = z.infer<typeof listingSchema>;
 
 export default function AddListing() {
-  const { toast } = useToast();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { id: listingId } = useParams<{ id: string }>();
@@ -37,7 +40,8 @@ export default function AddListing() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { control, handleSubmit, reset, setValue, watch } = useForm<IFormInput>({
+  const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<ListingFormValues>({
+    resolver: zodResolver(listingSchema),
     defaultValues: {
       title: "",
       author: "",
@@ -57,6 +61,8 @@ export default function AddListing() {
         try {
           const response = await api.get(`/listings/${listingId}`);
           const listing = response.data;
+
+          // Ensure we match the form structure
           reset({
             title: listing.title,
             author: listing.author,
@@ -67,75 +73,70 @@ export default function AddListing() {
             imageUrls: listing.imageUrls || [],
           });
         } catch (err) {
-          toast({
-            title: "Error",
-            description: "Failed to fetch listing for editing.",
-            variant: "destructive",
-          });
-          navigate("/listings"); // Redirect if listing not found or error
+          toast.error("Failed to fetch listing for editing");
+          navigate("/account/listings");
         }
       };
       fetchListing();
     }
-  }, [isEditing, listingId, toast, navigate, reset]);
+  }, [isEditing, listingId, navigate, reset]);
 
   useEffect(() => {
     if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      });
+      toast.error(error);
       dispatch(clearMessages());
     }
     if (successMessage) {
-      toast({
-        title: "Success",
-        description: successMessage,
-        variant: "success",
-      });
+      toast.success(successMessage);
       dispatch(clearMessages());
       if (!isEditing) {
         reset();
       }
     }
-  }, [error, successMessage, toast, dispatch, isEditing, reset]);
+  }, [error, successMessage, dispatch, isEditing, reset]);
 
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
+    if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0];
+
+      if (imageUrls.length >= 5) {
+        toast.error("You can only upload up to 5 images");
+        return;
+      }
+
+      // Basic client-side validation for file size (e.g. 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size should be less than 5MB");
+        return;
+      }
+
       const formData = new FormData();
       formData.append("image", file);
+
       const uploadResult = await dispatch(uploadListingImage(formData));
+
       if (uploadListingImage.fulfilled.match(uploadResult)) {
-        setValue("imageUrls", [...imageUrls, uploadResult.payload.imageUrl]);
-      } else {
-        toast({
-          title: "Error",
-          description: uploadResult.payload as string,
-          variant: "destructive",
-        });
+        setValue("imageUrls", [...imageUrls, uploadResult.payload.imageUrl], { shouldValidate: true });
+        toast.success("Image uploaded successfully");
       }
+
       if (fileInputRef.current) {
-        fileInputRef.current.value = ""; // Clear the file input
+        fileInputRef.current.value = "";
       }
     }
   };
 
-  const handleRemoveImage = () => {
-    setValue("imageUrls", []);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+  const handleRemoveImage = (indexToRemove: number) => {
+    setValue(
+      "imageUrls",
+      imageUrls.filter((_, index) => index !== indexToRemove),
+      { shouldValidate: true }
+    );
   };
 
-  const onSubmit = async (data: IFormInput) => {
+  const onSubmit = async (data: ListingFormValues) => {
     if (!user?._id) {
-      toast({
-        title: "Error",
-        description: "User not logged in or seller ID not available.",
-        variant: "destructive",
-      });
+      toast.error("User not logged in or seller ID not available.");
       return;
     }
 
@@ -158,7 +159,7 @@ export default function AddListing() {
   };
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-8 bg-background">
       <div className="container-custom max-w-3xl">
         <h1 className="font-display text-4xl font-bold mb-2">
           {isEditing ? "Edit Listing" : "List a New Listing"}
@@ -167,7 +168,7 @@ export default function AddListing() {
           {isEditing ? "Modify the details of your listing" : "Fill in the details to add your listing to the marketplace"}
         </p>
 
-        <Card className="shadow-elegant">
+        <Card className="shadow-elegant border-border/40">
           <CardHeader>
             <CardTitle>Listing Details</CardTitle>
             <CardDescription>Provide accurate information to attract buyers</CardDescription>
@@ -175,118 +176,176 @@ export default function AddListing() {
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-6">
               {/* Listing Images */}
-              <div className="space-y-2">
-                <Label>Listing Images</Label>
-                <div
-                  className={`border-2 border-dashed border-border rounded-lg p-8 text-center transition-colors relative ${
-                    loading || uploadLoading ? "cursor-not-allowed opacity-50" : "hover:border-primary cursor-pointer"
-                  }`}
-                  onClick={() => !(loading || uploadLoading) && fileInputRef.current?.click()}
-                >
-                  {imageUrls.length > 0 ? (
-                    <div className="relative w-full h-48 mb-4">
-                      <img src={imageUrls[0]} alt="Listing Preview" className="w-full h-full object-cover rounded-md" />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 rounded-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveImage();
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        PNG, JPG up to 10MB
-                      </p>
-                    </>
-                  )}
-                  <Input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageChange}
-                    className="hidden"
-                    accept="image/jpeg, image/png"
-                  />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className={errors.imageUrls ? "text-destructive" : ""}>
+                    Listing Images *
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    {imageUrls.length} / 5 images
+                  </span>
                 </div>
+
+                {/* Image Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {imageUrls.map((url, index) => (
+                    <div
+                      key={index}
+                      className="relative aspect-square rounded-lg overflow-hidden border-2 border-border group"
+                    >
+                      <img
+                        src={url}
+                        alt={`Listing ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleRemoveImage(index)}
+                          disabled={uploadLoading}
+                          className="h-8 w-8"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {/* Image number badge */}
+                      <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add More Images Card */}
+                  {imageUrls.length < 5 && (
+                    <div
+                      className={`relative aspect-square rounded-lg border-2 border-dashed transition-all cursor-pointer ${errors.imageUrls
+                          ? "border-destructive/50 bg-destructive/10"
+                          : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        }`}
+                      onClick={() => !uploadLoading && fileInputRef.current?.click()}
+                    >
+                      <div className="flex flex-col items-center justify-center h-full">
+                        {uploadLoading ? (
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        ) : (
+                          <>
+                            <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                            <p className="text-xs text-muted-foreground font-medium text-center px-2">
+                              {imageUrls.length === 0 ? "Add Images" : "Add More"}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Up to 5MB
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <Input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                  className="hidden"
+                  accept="image/jpeg, image/png, image/webp"
+                  disabled={uploadLoading}
+                />
+
+                {errors.imageUrls && (
+                  <p className="text-xs text-destructive">{errors.imageUrls.message}</p>
+                )}
               </div>
 
               {/* Title */}
-              <Controller
-                name="title"
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title *</Label>
-                    <Input id="title" placeholder="The Great Gatsby" {...field} disabled={loading || uploadLoading} />
-                  </div>
-                )}
-              />
+              <div className="space-y-2">
+                <Label htmlFor="title" className={errors.title ? "text-destructive" : ""}>Title *</Label>
+                <Controller
+                  name="title"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      id="title"
+                      placeholder="The Great Gatsby"
+                      {...field}
+                      disabled={loading}
+                      className={errors.title ? "border-destructive focus-visible:ring-destructive" : ""}
+                    />
+                  )}
+                />
+                {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+              </div>
 
               {/* Author */}
-              <Controller
-                name="author"
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="author">Author *</Label>
-                    <Input id="author" placeholder="F. Scott Fitzgerald" {...field} disabled={loading || uploadLoading} />
-                  </div>
-                )}
-              />
+              <div className="space-y-2">
+                <Label htmlFor="author" className={errors.author ? "text-destructive" : ""}>Author *</Label>
+                <Controller
+                  name="author"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      id="author"
+                      placeholder="F. Scott Fitzgerald"
+                      {...field}
+                      disabled={loading}
+                      className={errors.author ? "border-destructive focus-visible:ring-destructive" : ""}
+                    />
+                  )}
+                />
+                {errors.author && <p className="text-xs text-destructive">{errors.author.message}</p>}
+              </div>
 
               {/* Description */}
-              <Controller
-                name="description"
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description *</Label>
+              <div className="space-y-2">
+                <Label htmlFor="description" className={errors.description ? "text-destructive" : ""}>Description *</Label>
+                <Controller
+                  name="description"
+                  control={control}
+                  render={({ field }) => (
                     <Textarea
                       id="description"
                       placeholder="Describe the listing's condition, edition, and any special features..."
                       rows={4}
-                      {...field} disabled={loading || uploadLoading}
+                      {...field} disabled={loading}
+                      className={errors.description ? "border-destructive focus-visible:ring-destructive" : ""}
                     />
-                  </div>
-                )}
-              />
+                  )}
+                />
+                {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
+              </div>
 
               {/* Price & Condition Row */}
               <div className="grid md:grid-cols-2 gap-4">
-                <Controller
-                  name="price"
-                  control={control}
-                  rules={{ required: true, min: 0.01 }}
-                  render={({ field }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Price ($) *</Label>
-                      <Input id="price" type="number" step="0.01" placeholder="12.99" {...field} disabled={loading || uploadLoading} />
-                    </div>
-                  )}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="price" className={errors.price ? "text-destructive" : ""}>Price ($) *</Label>
+                  <Controller
+                    name="price"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        id="price"
+                        type="number"
+                        step="0.01"
+                        placeholder="12.99"
+                        {...field}
+                        disabled={loading}
+                        className={errors.price ? "border-destructive focus-visible:ring-destructive" : ""}
+                      />
+                    )}
+                  />
+                  {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
+                </div>
 
-                <Controller
-                  name="condition"
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <div className="space-y-2">
-                      <Label htmlFor="condition">Condition *</Label>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger disabled={loading || uploadLoading}>
+                <div className="space-y-2">
+                  <Label htmlFor="condition" className={errors.condition ? "text-destructive" : ""}>Condition *</Label>
+                  <Controller
+                    name="condition"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value} disabled={loading}>
+                        <SelectTrigger className={errors.condition ? "border-destructive focus:ring-destructive" : ""}>
                           <SelectValue placeholder="Select condition" />
                         </SelectTrigger>
                         <SelectContent>
@@ -296,21 +355,21 @@ export default function AddListing() {
                           <SelectItem value="Fair">Fair</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                  )}
-                />
+                    )}
+                  />
+                  {errors.condition && <p className="text-xs text-destructive">{errors.condition.message}</p>}
+                </div>
               </div>
 
               {/* Category */}
-              <Controller
-                name="category"
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category *</Label>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger disabled={loading || uploadLoading}>
+              <div className="space-y-2">
+                <Label htmlFor="category" className={errors.category ? "text-destructive" : ""}>Category *</Label>
+                <Controller
+                  name="category"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={loading}>
+                      <SelectTrigger className={errors.category ? "border-destructive focus:ring-destructive" : ""}>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -321,12 +380,20 @@ export default function AddListing() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                )}
-              />
+                  )}
+                />
+                {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
+              </div>
 
               <Button type="submit" className="w-full" size="lg" disabled={loading || uploadLoading}>
-                {loading || uploadLoading ? (isEditing ? "Saving Changes..." : "Listing Listing...") : (isEditing ? "Save Changes" : "List Listing")}
+                {loading || uploadLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isEditing ? "Saving Changes..." : "Creating Listing..."}
+                  </>
+                ) : (
+                  isEditing ? "Save Changes" : "Create Listing"
+                )}
               </Button>
             </CardContent>
           </form>

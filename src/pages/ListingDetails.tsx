@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ShoppingCart, ArrowLeft, Star } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Star, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useDispatch, useSelector } from "react-redux";
@@ -13,6 +13,7 @@ import { addItemToCart } from "@/store/cartSlice";
 import { Spinner } from "@/components/ui/spinner";
 import { isAxiosError, AxiosError } from "axios";
 import ListingDetailsSkeleton from "@/components/ListingDetailsSkeleton";
+import { ErrorComponent } from "@/components/ErrorComponent";
 
 export default function ListingDetails() {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +22,9 @@ export default function ListingDetails() {
   const navigate = useNavigate();
   const { currentListing: listing, currentSeller: seller, loading, error } = useSelector((state: RootState) => state.listing);
   const { isAuthenticated } = useSelector((state: RootState) => state.user);
-  const { items: cartItems, status: cartStatus } = useSelector((state: RootState) => state.cart);
+  const { items: cartItems, status: cartStatus, loadingItemId } = useSelector((state: RootState) => state.cart);
+
+  const isAddingToCart = listing?._id === loadingItemId;
 
   useEffect(() => {
     if (id) {
@@ -57,11 +60,15 @@ export default function ListingDetails() {
         });
       } catch (err: unknown) {
         let errorMessage = "An error occurred while adding to cart.";
-        if (isAxiosError(err) && err.response?.data?.message) {
+
+        if (typeof err === 'string') {
+          errorMessage = err;
+        } else if (isAxiosError(err) && err.response?.data?.message) {
           errorMessage = err.response.data.message;
         } else if (err instanceof Error) {
           errorMessage = err.message;
         }
+
         toast({
           title: "Failed to add to cart",
           description: errorMessage,
@@ -77,14 +84,12 @@ export default function ListingDetails() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-display text-4xl font-bold mb-4">Error</h1>
-          <p className="text-lg text-muted-foreground mb-4">{error}</p>
-          <Link to="/listings">
-            <Button variant="outline">Browse Listings</Button>
-          </Link>
-        </div>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <ErrorComponent
+          title="Error Loading Listing"
+          message={error}
+          onRetry={() => id && dispatch(fetchListingDetails(id))}
+        />
       </div>
     );
   }
@@ -157,13 +162,16 @@ export default function ListingDetails() {
                     <AvatarFallback>{seller.name[0]}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-semibold">{seller.name}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold">{seller.name}</p>
+                      {seller.totalSales > 5 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 h-5 gap-1 border-green-200 bg-green-50 text-green-700 hover:bg-green-50">
+                          <CheckCircle className="w-3 h-3" />
+                          Trusted
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="flex items-center">
-                        <Star className="h-4 w-4 fill-accent text-accent mr-1" />
-                        <span>{seller.rating}</span>
-                      </div>
-                      <span>•</span>
                       <span>{seller.totalSales} sales</span>
                     </div>
                   </div>
@@ -171,13 +179,13 @@ export default function ListingDetails() {
               </CardContent>
             </Card>
 
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="w-full"
               onClick={handleAddToCart}
-              disabled={cartStatus === 'loading'}
+              disabled={isAddingToCart}
             >
-              {cartStatus === 'loading' ? <Spinner /> : <><ShoppingCart className="mr-2 h-5 w-5" />Add to Cart</>}
+              {isAddingToCart ? <Spinner size="sm" className="text-primary-foreground" /> : <><ShoppingCart className="mr-2 h-5 w-5" />Add to Cart</>}
             </Button>
           </div>
         </div>

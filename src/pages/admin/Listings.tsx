@@ -55,9 +55,10 @@ export default function Listings() {
       sortable: true,
     },
     {
-      key: "sellerName",
+      key: "seller",
       label: "Seller",
       sortable: true,
+      render: (listing: Listing) => listing.seller?.fullName || "Unknown Seller",
     },
     {
       key: "price",

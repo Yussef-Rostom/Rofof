@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { getOrderById } from '@/lib/api';
+import { getUserOrderById } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import UserOrderDetailSkeleton from '@/components/account/UserOrderDetailSkeleton';
 import { AxiosError } from 'axios';
@@ -52,7 +52,7 @@ const UserOrderDetail = () => {
         return;
       }
       try {
-        const data = await getOrderById(id);
+        const data = await getUserOrderById(id);
         setOrder(data);
       } catch (err: unknown) {
         let errorMessage = "Failed to fetch order details";

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ListingCard } from "@/components/ListingCard";
+import { ErrorComponent } from "@/components/ErrorComponent";
 import { categories } from "@/lib/mockData";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +50,7 @@ export default function BrowseListings() {
     const matchesCategory =
       selectedCategories.length === 0 || selectedCategories.includes(listing.category);
     const matchesPrice = listing.price >= priceRange[0] && listing.price <= priceRange[1];
-    
+
     return matchesSearch && matchesCategory && matchesPrice;
   });
 
@@ -150,7 +151,13 @@ export default function BrowseListings() {
                 ))}
               </div>
             )}
-            {error && <p className="text-center text-destructive text-lg">Error: {error}</p>}
+            {error && (
+              <ErrorComponent
+                message={error}
+                onRetry={() => dispatch(fetchListings())}
+                className="mt-8"
+              />
+            )}
             {!loading && !error && filteredListings.length === 0 && (
               <div className="text-center py-16">
                 <p className="text-muted-foreground text-lg">No listings found matching your criteria</p>
