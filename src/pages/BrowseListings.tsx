@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, SearchX, PackageOpen } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { fetchListings } from "../store/listingSlice";
@@ -274,8 +274,44 @@ export default function BrowseListings() {
               />
             )}
             {!loading && !error && listings.length === 0 && (
-              <div className="text-center py-16">
-                <p className="text-muted-foreground text-lg">No listings found matching your criteria</p>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                {searchParams.get("search") || searchParams.get("category") || searchParams.get("priceMin") || searchParams.get("priceMax") ? (
+                  // Scenario 1: Filters active but no matches
+                  <>
+                    <div className="bg-muted/50 p-4 rounded-full mb-4">
+                      <SearchX className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-display text-lg font-semibold mb-2">No matches found</h3>
+                    <p className="text-muted-foreground max-w-sm mb-6">
+                      We couldn't find any listings matching your current filters. Try adjusting your search or removing some filters.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSearchParams({});
+                        setSearchQuery("");
+                        setSelectedCategories([]);
+                        setPriceRange([0, 50]);
+                      }}
+                    >
+                      Clear all filters
+                    </Button>
+                  </>
+                ) : (
+                  // Scenario 2: Database is empty (no filters active)
+                  <>
+                    <div className="bg-muted/50 p-4 rounded-full mb-4">
+                      <PackageOpen className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-display text-lg font-semibold mb-2">No listings available</h3>
+                    <p className="text-muted-foreground max-w-sm mb-6">
+                      There are no listings in the marketplace yet. Be the first to share your collection with the community!
+                    </p>
+                    <Button onClick={() => window.location.href = '/dashboard/add-listing'}>
+                      Start Selling
+                    </Button>
+                  </>
+                )}
               </div>
             )}
             {!loading && !error && listings.length > 0 && (
