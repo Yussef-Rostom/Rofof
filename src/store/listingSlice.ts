@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../lib/api';
 import { AppDispatch } from './index';
-import { Listing, Seller, ListingState } from '@/types';
+import { Listing, Seller, ListingState, FetchListingsParams } from '@/types';
 import { AxiosError } from 'axios';
 
 
@@ -14,6 +14,8 @@ const initialState: ListingState = {
   uploadLoading: false,
   error: null,
   successMessage: null,
+  totalPages: 1,
+  currentPage: 1,
 };
 
 export const addListing = createAsyncThunk(
@@ -58,9 +60,9 @@ export const uploadListingImage = createAsyncThunk(
 
 export const fetchListings = createAsyncThunk(
   'listing/fetchListings',
-  async (_, { rejectWithValue }) => {
+  async (params: FetchListingsParams = {}, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/listings`);
+      const response = await api.get(`/listings`, { params });
       return response.data;
     } catch (error: unknown) {
       let message = "Failed to fetch listings.";
@@ -195,6 +197,8 @@ const listingSlice = createSlice({
       .addCase(fetchListings.fulfilled, (state, action: PayloadAction<{ listings: Listing[]; totalPages: number; currentPage: number }>) => {
         state.loading = false;
         state.listings = action.payload.listings;
+        state.totalPages = action.payload.totalPages;
+        state.currentPage = action.payload.currentPage;
       })
       .addCase(fetchListings.rejected, (state, action) => {
         state.loading = false;

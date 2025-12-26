@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ListingCard } from "@/components/ListingCard";
 import { ErrorComponent } from "@/components/ErrorComponent";
 import { categories } from "@/lib/mockData";
@@ -20,39 +20,126 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSearchParams } from "react-router-dom";
+import { debounce } from "lodash";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export default function BrowseListings() {
   const dispatch = useDispatch<AppDispatch>();
-  const { listings, loading, error } = useSelector((state: RootState) => state.listing);
+  const { listings, loading, error, totalPages, currentPage } = useSelector((state: RootState) => state.listing);
   const isMobile = useIsMobile();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState([0, 50]);
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    searchParams.get("category")?.split(",") || []
+  );
+  const [priceRange, setPriceRange] = useState([
+    Number(searchParams.get("priceMin")) || 0,
+    Number(searchParams.get("priceMax")) || 50,
+  ]);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
-  useEffect(() => {
-    dispatch(fetchListings());
-  }, [dispatch]);
+  // Debounced search handler
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      setSearchParams((prev) => {
+        if (query) {
+          prev.set("search", query);
+        } else {
+          prev.delete("search");
+        }
+        prev.set("page", "1"); // Reset to page 1 on search
+        return prev;
+      });
+    }, 500),
+    [setSearchParams]
+  );
 
-  const handleCategoryToggle = (category: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category]
-    );
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    debouncedSearch(e.target.value);
   };
 
-  const filteredListings = listings.filter((listing) => {
-    const matchesSearch =
-      listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      listing.author.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategories.length === 0 || selectedCategories.includes(listing.category);
-    const matchesPrice = listing.price >= priceRange[0] && listing.price <= priceRange[1];
+  const handleCategoryToggle = (category: string) => {
+    setSelectedCategories((prev) => {
+      const newCategories = prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category];
 
-    return matchesSearch && matchesCategory && matchesPrice;
-  });
+      setSearchParams((params) => {
+        if (newCategories.length > 0) {
+          params.set("category", newCategories.join(","));
+        } else {
+          params.delete("category");
+        }
+        params.set("page", "1");
+        return params;
+      });
+
+      return newCategories;
+    });
+  };
+
+  const handlePriceChange = (value: number[]) => {
+    setPriceRange(value);
+    // Debounce price update to avoid too many API calls while sliding
+    const timeoutId = setTimeout(() => {
+      setSearchParams((params) => {
+        params.set("priceMin", value[0].toString());
+        params.set("priceMax", value[1].toString());
+        params.set("page", "1");
+        return params;
+      });
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  };
+
+  const handleSortChange = (value: string) => {
+    const [sortBy, order] = value.split(":");
+    setSearchParams((params) => {
+      params.set("sortBy", sortBy);
+      params.set("order", order);
+      params.set("page", "1");
+      return params;
+    });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setSearchParams((params) => {
+      params.set("page", newPage.toString());
+      return params;
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    dispatch(fetchListings({
+      search: searchParams.get("search") || undefined,
+      category: searchParams.get("category") || undefined,
+      priceMin: searchParams.get("priceMin") ? Number(searchParams.get("priceMin")) : undefined,
+      priceMax: searchParams.get("priceMax") ? Number(searchParams.get("priceMax")) : undefined,
+      page: searchParams.get("page") ? Number(searchParams.get("page")) : 1,
+      limit: 12, // Or whatever limit you prefer
+      sortBy: searchParams.get("sortBy") || 'createdAt',
+      order: (searchParams.get("order") as 'asc' | 'desc') || 'desc',
+    }));
+  }, [dispatch, searchParams]);
 
   const renderFilters = () => (
     <div className="bg-card border border-border rounded-lg p-6 space-y-6">
@@ -67,7 +154,7 @@ export default function BrowseListings() {
             id="search"
             placeholder="Title or author..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             className="pl-9"
           />
         </div>
@@ -105,7 +192,7 @@ export default function BrowseListings() {
           max={50}
           step={1}
           value={priceRange}
-          onValueChange={setPriceRange}
+          onValueChange={handlePriceChange}
           className="mt-4"
         />
       </div>
@@ -144,6 +231,25 @@ export default function BrowseListings() {
 
           {/* Listings Grid */}
           <div className="lg:col-span-3">
+            <div className="flex justify-between items-center mb-6">
+              <p className="text-muted-foreground">
+                {loading ? "Searching..." : `Showing ${listings.length} results`}
+              </p>
+              <Select
+                value={`${searchParams.get("sortBy") || "createdAt"}:${searchParams.get("order") || "desc"}`}
+                onValueChange={handleSortChange}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt:desc">Newest</SelectItem>
+                  <SelectItem value="createdAt:asc">Oldest</SelectItem>
+                  <SelectItem value="price:asc">Price: Low to High</SelectItem>
+                  <SelectItem value="price:desc">Price: High to Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {loading && (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -154,25 +260,65 @@ export default function BrowseListings() {
             {error && (
               <ErrorComponent
                 message={error}
-                onRetry={() => dispatch(fetchListings())}
+                onRetry={() => dispatch(fetchListings({
+                  search: searchParams.get("search") || undefined,
+                  category: searchParams.get("category") || undefined,
+                  priceMin: searchParams.get("priceMin") ? Number(searchParams.get("priceMin")) : undefined,
+                  priceMax: searchParams.get("priceMax") ? Number(searchParams.get("priceMax")) : undefined,
+                  page: searchParams.get("page") ? Number(searchParams.get("page")) : 1,
+                  limit: 12,
+                  sortBy: searchParams.get("sortBy") || 'createdAt',
+                  order: (searchParams.get("order") as 'asc' | 'desc') || 'desc',
+                }))}
                 className="mt-8"
               />
             )}
-            {!loading && !error && filteredListings.length === 0 && (
+            {!loading && !error && listings.length === 0 && (
               <div className="text-center py-16">
                 <p className="text-muted-foreground text-lg">No listings found matching your criteria</p>
               </div>
             )}
-            {!loading && !error && filteredListings.length > 0 && (
+            {!loading && !error && listings.length > 0 && (
               <>
-                <p className="text-muted-foreground mb-6">
-                  Showing {filteredListings.length} {filteredListings.length === 1 ? "listing" : "listings"}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredListings.map((listing) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+                  {listings.map((listing) => (
                     <ListingCard key={listing._id} {...listing} />
                   ))}
                 </div>
+
+                {totalPages > 1 && (
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handlePageChange(Number(currentPage) - 1);
+                          }}
+                          className={Number(currentPage) <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+
+                      <PaginationItem>
+                        <div className="flex items-center px-4 text-sm font-medium">
+                          Page {currentPage} of {totalPages}
+                        </div>
+                      </PaginationItem>
+
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handlePageChange(Number(currentPage) + 1);
+                          }}
+                          className={Number(currentPage) >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
               </>
             )}
           </div>

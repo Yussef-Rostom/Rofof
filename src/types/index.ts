@@ -96,6 +96,8 @@ export interface ListingState {
   uploadLoading: boolean;
   error: string | null;
   successMessage: string | null;
+  totalPages: number;
+  currentPage: number;
 }
 
 export interface EmbeddedListing {
@@ -150,4 +152,15 @@ export interface AdminListing {
   sellerName: string;
   price: number;
   status: "Available" | "Sold";
+}
+
+export interface FetchListingsParams {
+  search?: string;
+  category?: string;
+  priceMin?: number;
+  priceMax?: number;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  order?: "asc" | "desc";
 }
