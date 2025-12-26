@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../store";
 import { fetchFeaturedListings } from "../store/listingSlice";
 import { useEffect } from "react";
-import { ShoppingBag, Handshake, Tag } from "lucide-react";
+import { ShoppingBag, Handshake, Tag, PackageOpen } from "lucide-react";
 
 export default function Home() {
   const dispatch = useDispatch<AppDispatch>();
@@ -123,10 +123,17 @@ export default function Home() {
             </div>
           )}
           {!loading && !error && featuredListings.length === 0 && (
-            <div className="py-8 text-center">
-              <p className="text-lg text-muted-foreground">
-                No featured listings available
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="bg-muted/50 p-4 rounded-full mb-4">
+                <PackageOpen className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="font-display text-lg font-semibold mb-2">No featured treasures yet</h3>
+              <p className="text-muted-foreground max-w-sm mb-6">
+                Our community is just getting started. Be the first to showcase your items!
               </p>
+              <Link to="/dashboard/add-listing">
+                <Button>Start Selling</Button>
+              </Link>
             </div>
           )}
           {!loading && !error && featuredListings.length > 0 && (
